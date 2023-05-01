@@ -1,0 +1,29 @@
+version: "3.5"
+
+services:
+  server:
+    image: golang:1.19.6-alpine3.16
+    # build:
+    #   context: ./docker/golang
+    #   dockerfile: Dockerfile
+    volumes:
+      - .:/server
+    working_dir: /server
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    entrypoint: go run ./server/server.go
+    restart: always
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=root
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      # - POSTGRES_USER={DB_USER}
+      # - POSTGRES_PASSWORD={DB_PASSWORD}
+      # - PGDATA=/var/lib/postgresql/data/pgdata
+    restart: always

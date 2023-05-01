@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/gorilla/websocket"
+	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )
 
@@ -24,7 +26,16 @@ type client struct {
 var clientsMap = make(map[*client]bool)
 var broadcastChannel = make(chan string)
 
+const (
+	// HOST value should equal to service name in yaml.services
+	HOST     = "db"
+	DATABASE = "postgres"
+	USER     = "postgres"
+	PASSWORD = "root"
+)
+
 func main() {
+	// log setting
 	wd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -41,6 +52,21 @@ func main() {
 		logrus.Info("Failed to log to file, using default stderr")
 	}
 
+	// DB setting
+	db, err := sql.Open(
+		"postgres",
+		fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", HOST, USER, PASSWORD, DATABASE),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	if err = db.Ping(); err != nil {
+		panic(err)
+	}
+	fmt.Println("Successfully created connection to database")
+
+	// handler setting
 	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {

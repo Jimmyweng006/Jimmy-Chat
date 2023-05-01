@@ -8,6 +8,10 @@
     2. 一個額外的goroutine處理broadcast
         1. 出bug啦，怎麼client A發出的消息，自己有收到但client B沒收到啊...
         * 抓到，原來是處理input的goroutine卡住了... 所以需要額外的goroutine去listenToServer...
+    * 連接DB
+    1. docker run --name jimmy-chat-postgres -e POSTGRES_PASSWORD=root -d -p 5432:5432 postgres
+    2. 使用docker compose管理兩個container(Server & DB)
+
 * 代辦
     1. 多個用戶加入頻道內聊天
         1. client request server 建立頻道

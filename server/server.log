@@ -78,3 +78,5 @@
 [31mERRO[0m[0122] error in listening: %vwebsocket: close 1006 (abnormal closure): unexpected EOF 
 [36mINFO[0m[0122] Client disconnected: %s
 0x140000b22c0        
+[36mINFO[0m[0000] server start on port: 8080                   
+[36mINFO[0m[0000] broadcast() start...                         
