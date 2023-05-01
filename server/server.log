@@ -1,0 +1,80 @@
+[36mINFO[0m[0000] server start on port: 8080                   
+[36mINFO[0m[0000] broadcast() start...                         
+[36mINFO[0m[0016] New client connected: %s
+0x140000ea580       
+[36mINFO[0m[0016] listenToClient() start...                    
+[36mINFO[0m[0025] start reading from client %s with message ---> %s 
+0x140000ea580[49 50 51] 
+[36mINFO[0m[0025] listenToClient() end...                      
+[36mINFO[0m[0025] start writing to client %s with message ---> %s
+0x140000ea5800x140000ea580: 123 
+[36mINFO[0m[0025] broadcast() end...                           
+[36mINFO[0m[0045] New client connected: %s
+0x140000ea840       
+[36mINFO[0m[0045] listenToClient() start...                    
+[36mINFO[0m[0049] start reading from client %s with message ---> %s 
+0x140000ea580[116 101 115 116 65] 
+[36mINFO[0m[0049] listenToClient() end...                      
+[36mINFO[0m[0049] start writing to client %s with message ---> %s
+0x140000ea5800x140000ea580: testA 
+[36mINFO[0m[0049] start writing to client %s with message ---> %s
+0x140000ea8400x140000ea580: testA 
+[36mINFO[0m[0049] broadcast() end...                           
+[36mINFO[0m[0054] start reading from client %s with message ---> %s 
+0x140000ea840[84 101 115 116 66] 
+[36mINFO[0m[0054] listenToClient() end...                      
+[36mINFO[0m[0054] start writing to client %s with message ---> %s
+0x140000ea5800x140000ea840: TestB 
+[36mINFO[0m[0054] start writing to client %s with message ---> %s
+0x140000ea8400x140000ea840: TestB 
+[36mINFO[0m[0054] broadcast() end...                           
+[36mINFO[0m[0062] start reading from client %s with message ---> %s 
+0x140000ea840[98 121 101] 
+[36mINFO[0m[0062] listenToClient() end...                      
+[36mINFO[0m[0062] start writing to client %s with message ---> %s
+0x140000ea5800x140000ea840: bye 
+[36mINFO[0m[0062] start writing to client %s with message ---> %s
+0x140000ea8400x140000ea840: bye 
+[36mINFO[0m[0062] broadcast() end...                           
+[31mERRO[0m[0063] error in listening: %vwebsocket: close 1006 (abnormal closure): unexpected EOF 
+[36mINFO[0m[0063] Client disconnected: %s
+0x140000ea840        
+[36mINFO[0m[0067] start reading from client %s with message ---> %s 
+0x140000ea580[98 121 101] 
+[36mINFO[0m[0067] listenToClient() end...                      
+[36mINFO[0m[0067] start writing to client %s with message ---> %s
+0x140000ea5800x140000ea580: bye 
+[36mINFO[0m[0067] broadcast() end...                           
+[31mERRO[0m[0069] error in listening: %vwebsocket: close 1006 (abnormal closure): unexpected EOF 
+[36mINFO[0m[0069] Client disconnected: %s
+0x140000ea580        
+[36mINFO[0m[0000] server start on port: 8080                   
+[36mINFO[0m[0000] broadcast() start...                         
+[36mINFO[0m[0005] New client connected: %s
+0x140000b2000       
+[36mINFO[0m[0005] listenToClient() start...                    
+[36mINFO[0m[0006] New client connected: %s
+0x140000b22c0       
+[36mINFO[0m[0006] listenToClient() start...                    
+[36mINFO[0m[0010] start reading from client %s with message ---> %s 
+0x140000b2000testA 
+[36mINFO[0m[0010] listenToClient() end...                      
+[36mINFO[0m[0010] start writing to client %s with message ---> %s
+0x140000b20000x140000b2000: testA 
+[36mINFO[0m[0010] start writing to client %s with message ---> %s
+0x140000b22c00x140000b2000: testA 
+[36mINFO[0m[0010] broadcast() end...                           
+[36mINFO[0m[0014] start reading from client %s with message ---> %s 
+0x140000b22c0testB 
+[36mINFO[0m[0014] listenToClient() end...                      
+[36mINFO[0m[0014] start writing to client %s with message ---> %s
+0x140000b20000x140000b22c0: testB 
+[36mINFO[0m[0014] start writing to client %s with message ---> %s
+0x140000b22c00x140000b22c0: testB 
+[36mINFO[0m[0014] broadcast() end...                           
+[31mERRO[0m[0121] error in listening: %vwebsocket: close 1006 (abnormal closure): unexpected EOF 
+[36mINFO[0m[0121] Client disconnected: %s
+0x140000b2000        
+[31mERRO[0m[0122] error in listening: %vwebsocket: close 1006 (abnormal closure): unexpected EOF 
+[36mINFO[0m[0122] Client disconnected: %s
+0x140000b22c0        
