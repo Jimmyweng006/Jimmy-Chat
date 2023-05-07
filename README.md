@@ -11,6 +11,9 @@
     * 連接DB
     1. docker run --name jimmy-chat-postgres -e POSTGRES_PASSWORD=root -d -p 5432:5432 postgres
     2. 使用docker compose管理兩個container(Server & DB)
+* 2023/05/07
+    1. 把之前simple_bank學到的那一套搬過來用囉(golang sqlc, Makefile...)
+    2. 完成User登入及發送訊息相關的DB行為
 
 * 代辦
     1. 多個用戶加入頻道內聊天

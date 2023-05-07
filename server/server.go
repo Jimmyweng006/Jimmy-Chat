@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
@@ -23,8 +25,13 @@ type client struct {
 	clientID string
 }
 
+type Message struct {
+	Sender  string
+	Content []byte
+}
+
 var clientsMap = make(map[*client]bool)
-var broadcastChannel = make(chan string)
+var broadcastChannel = make(chan Message)
 
 const (
 	// HOST value should equal to service name in yaml.services
@@ -53,18 +60,24 @@ func main() {
 	}
 
 	// DB setting
-	db, err := sql.Open(
+	dbConnection, err := sql.Open(
 		"postgres",
 		fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", HOST, USER, PASSWORD, DATABASE),
 	)
 	if err != nil {
-		panic(err)
+		logrus.Error(err)
 	}
 
-	if err = db.Ping(); err != nil {
-		panic(err)
+	if err = dbConnection.Ping(); err != nil {
+		logrus.Error(err)
 	}
+
+	defer dbConnection.Close()
+
 	fmt.Println("Successfully created connection to database")
+
+	// sql query object setting
+	queryObject := db.New(dbConnection)
 
 	// handler setting
 	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +90,12 @@ func main() {
 		// generate uuid by pointer
 		clientID := fmt.Sprintf("%p", conn)
 
+		createdUser, err := queryObject.CreateUser(context.Background(), clientID)
+		if err != nil {
+			logrus.Error(err)
+		}
+
+		logrus.Info("createdUser info %v", createdUser)
 		logrus.Info("New client connected: %s\n", clientID)
 
 		c := &client{conn: conn, clientID: clientID}
@@ -87,7 +106,7 @@ func main() {
 	})
 
 	// one goroutine to handle broadcast
-	go broadcast()
+	go broadcast(queryObject)
 
 	logrus.Info("server start on port: 8080")
 	logrus.Fatal(http.ListenAndServe(":8080", nil))
@@ -110,21 +129,45 @@ func listenToClient(c *client) {
 		}
 
 		logrus.Info("start reading from client %s with message ---> %s \n", c.clientID, string(message))
-		broadcastChannel <- fmt.Sprintf("%s: %s", c.clientID, message)
+		broadcastChannel <- Message{
+			Sender:  c.clientID,
+			Content: message,
+		}
 
 		logrus.Info("listenToClient() end...")
 	}
 }
 
-func broadcast() {
+func broadcast(queryObject *db.Queries) {
 	logrus.Info("broadcast() start...")
 	for {
-		message := <-broadcastChannel
+		messageObject := <-broadcastChannel
+		logrus.Info("messageObject info %v", messageObject)
+
+		senderObject, err := queryObject.FindUser(context.Background(), messageObject.Sender)
+		if err != nil {
+			logrus.Error(err)
+		}
+		logrus.Info("senderObject info %v", senderObject)
+
+		createMessageParams := db.CreateMessageParams{
+			RoomID:         123,
+			ReplyMessageID: sql.NullInt64{Valid: false},
+			SenderID:       senderObject.ID,
+			MessageText:    string(messageObject.Content),
+		}
+
+		sendMessage, err := queryObject.CreateMessage(context.Background(), createMessageParams)
+		if err != nil {
+			logrus.Error(err)
+		}
+		logrus.Info("sendMessage info %v", sendMessage)
 
 		for c := range clientsMap {
-			logrus.Info("start writing to client %s with message ---> %s\n", c.clientID, message)
+			logrus.Info("start writing to client %s with message ---> %s\n", c.clientID, string(messageObject.Content))
 
-			err := c.conn.WriteMessage(websocket.TextMessage, []byte(message))
+			messageSend := fmt.Sprintf(senderObject.Username + ": " + string(messageObject.Content))
+			err := c.conn.WriteMessage(websocket.TextMessage, []byte(messageSend))
 			if err != nil {
 				logrus.Error("error in broadcast: %v", err)
 				c.conn.Close()
