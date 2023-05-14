@@ -14,6 +14,9 @@
 * 2023/05/07
     1. 把之前simple_bank學到的那一套搬過來用囉(golang sqlc, Makefile...)
     2. 完成User登入及發送訊息相關的DB行為
+* 2023/05/14
+    * 參考了System Design Interview An insider's Guide跟這篇[文章](https://tachunwu.github.io/posts/discord-cassandra/)後，基本上要改成以Cassandra來當作儲存聊天訊息的DB了...
+    * Zookeeper: a component to find suitable server(in this case, Chat Server) for clients
 
 * 代辦
     1. 多個用戶加入頻道內聊天
@@ -21,7 +24,7 @@
         2. client request server 顯示所有頻道
         3. client request server 加入頻道
         4. ~~client request server 發言，server顯示用戶A的發言給在頻道內的所有人~~ done
-    2. 用database儲存頻道聊天訊息
+    2. ~~用database儲存頻道聊天訊息~~ done
 
 ## Debug
 
