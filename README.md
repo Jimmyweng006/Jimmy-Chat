@@ -17,6 +17,10 @@
 * 2023/05/14
     * 參考了System Design Interview An insider's Guide跟這篇[文章](https://tachunwu.github.io/posts/discord-cassandra/)後，基本上要改成以Cassandra來當作儲存聊天訊息的DB了...
     * Zookeeper: a component to find suitable server(in this case, Chat Server) for clients
+* 2023/05/14
+    * 先把登入之類的基本功能整合進來吧...
+    * 因為沒有設置同時run兩個file出現了funciton undefined問題，搞了好久唉...
+        * entrypoint: go run ./server/chat-server.go ./server/api-server.go
 
 * 代辦
     1. 多個用戶加入頻道內聊天
@@ -25,6 +29,10 @@
         3. client request server 加入頻道
         4. ~~client request server 發言，server顯示用戶A的發言給在頻道內的所有人~~ done
     2. ~~用database儲存頻道聊天訊息~~ done
+    3. logIn/signIn
+        1. signIn
+        2. user password encryption
+        3. verify user
 
 ## Debug
 

@@ -48,12 +48,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	logrus.Info("pwd: %s", wd)
+	logrus.Info("pwd: ", wd)
 	logPath := filepath.Join(wd, "server.log")
 
 	file, err := os.OpenFile("server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err == nil {
-		logrus.Info("logPath: %s", logPath)
+		logrus.Info("logPath: ", logPath)
 		logrus.SetOutput(file)
 	} else {
 		logrus.Info("Failed to log to file, using default stderr")
@@ -74,12 +74,16 @@ func main() {
 
 	defer dbConnection.Close()
 
-	fmt.Println("Successfully created connection to database")
+	logrus.Info("Successfully created connection to database")
 
 	// sql query object setting
 	queryObject := db.New(dbConnection)
 
 	// handler setting
+	http.HandleFunc("/login", loginHandler)
+	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/dashboard", dashboardHandler)
+
 	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
