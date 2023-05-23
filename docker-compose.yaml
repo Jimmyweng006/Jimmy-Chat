@@ -13,9 +13,8 @@ services:
       - "8080:8080"
     depends_on:
       - db
-    entrypoint: go run ./server/chat-server.go ./server/api-server.go
+    entrypoint: go run ./server/.
     # ["sh", "-c", "./run.sh"]
-    # go run ./server/chat-server.go
     restart: always
   db:
     image: postgres
