@@ -32,7 +32,7 @@ func init() {
 	}
 }
 
-func loginHandler(w http.ResponseWriter, r *http.Request) {
+func logInHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		var requestBody LoginRequest
 		err := json.NewDecoder(r.Body).Decode(&requestBody)
@@ -76,7 +76,7 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
+func logOutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, sessionName)
 
 	delete(session.Values, sessionUserID)

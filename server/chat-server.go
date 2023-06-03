@@ -10,6 +10,9 @@ import (
 	"path/filepath"
 
 	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
+	delivery "github.com/Jimmyweng006/Jimmy-Chat/server/user/delivery"
+	repository "github.com/Jimmyweng006/Jimmy-Chat/server/user/repository"
+	usecase "github.com/Jimmyweng006/Jimmy-Chat/server/user/usecase"
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
@@ -76,41 +79,45 @@ func main() {
 
 	logrus.Info("Successfully created connection to database")
 
-	// sql query object setting
+	// Clean Architecture injection
 	queryObject := db.New(dbConnection)
+	userRepository := repository.NewUserRepository(queryObject)
+	userUsercase := usecase.NewUserUsecase(userRepository)
+	userHandler := delivery.NewHandler(userUsercase)
 
 	// handler setting
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/logout", logoutHandler)
-	http.HandleFunc("/dashboard", dashboardHandler)
+	http.HandleFunc("/signin", userHandler.SignInHandler)
+	// http.HandleFunc("/login", logInHandler)
+	// http.HandleFunc("/logout", logOutHandler)
+	// http.HandleFunc("/dashboard", dashboardHandler)
 
-	http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			logrus.Error(err)
-			return
-		}
+	// http.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
+	// 	conn, err := upgrader.Upgrade(w, r, nil)
+	// 	if err != nil {
+	// 		logrus.Error(err)
+	// 		return
+	// 	}
 
-		// generate uuid by pointer
-		clientID := fmt.Sprintf("%p", conn)
+	// 	// generate uuid by pointer
+	// 	clientID := fmt.Sprintf("%p", conn)
 
-		createdUser, err := queryObject.CreateUser(context.Background(), clientID)
-		if err != nil {
-			logrus.Error(err)
-		}
+	// 	createdUser, err := queryObject.CreateUser(context.Background(), clientID)
+	// 	if err != nil {
+	// 		logrus.Error(err)
+	// 	}
 
-		logrus.Info("createdUser info %v", createdUser)
-		logrus.Info("New client connected: %s\n", clientID)
+	// 	logrus.Info("createdUser info %v", createdUser)
+	// 	logrus.Info("New client connected: %s\n", clientID)
 
-		c := &client{conn: conn, clientID: clientID}
-		clientsMap[c] = true
+	// 	c := &client{conn: conn, clientID: clientID}
+	// 	clientsMap[c] = true
 
-		// a separate goroutine to listen on client
-		go listenToClient(c)
-	})
+	// 	// a separate goroutine to listen on client
+	// 	go listenToClient(c)
+	// })
 
-	// one goroutine to handle broadcast
-	go broadcast(queryObject)
+	// // one goroutine to handle broadcast
+	// go broadcast(queryObject)
 
 	logrus.Info("server start on port: 8080")
 	logrus.Fatal(http.ListenAndServe(":8080", nil))
