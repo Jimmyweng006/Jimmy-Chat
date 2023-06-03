@@ -23,7 +23,11 @@
         * entrypoint: go run ./server/chat-server.go ./server/api-server.go
 * 2023/05/23
     * "pq: null value in column \"password\" violates not-null constraint" -> 先從client端開始動工吧...
-
+* 2023/05/29
+    * 被"如何在handler裡面處理DB相關的事情"搞得很頭痛，該回去複習之前Clean Architecture的project了...
+* 2023/06/03
+    1. 先定義好domain的interface(repository, usecase)，再來寫實作...
+    2. 依照Clean Architecture的架構，完成client end & server end, User singIn的功能
 * 代辦
     1. 多個用戶加入頻道內聊天
         1. client request server 建立頻道
