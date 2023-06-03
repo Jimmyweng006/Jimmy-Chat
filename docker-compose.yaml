@@ -3,18 +3,17 @@ version: "3.5"
 services:
   server:
     image: golang:1.19.6-alpine3.16
-    # build:
-    #   context: ./docker/golang
-    #   dockerfile: Dockerfile
+    # 本機檔案掛載至 docker 內部
     volumes:
       - .:/server
+    # docker 啟動時所在的目錄
     working_dir: /server
     ports:
       - "8080:8080"
     depends_on:
       - db
     entrypoint: go run ./server/.
-    # ["sh", "-c", "./run.sh"]
+    # entrypoint: ["sh", "-c", "./run.sh"]
     restart: always
   db:
     image: postgres
