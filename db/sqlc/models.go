@@ -14,21 +14,22 @@ type Message struct {
 	RoomID         int64         `json:"room_id"`
 	ReplyMessageID sql.NullInt64 `json:"reply_message_id"`
 	SenderID       int64         `json:"sender_id"`
+	MessageText    string        `json:"message_text"`
 	ModifiedAt     time.Time     `json:"modified_at"`
 	CreatedAt      time.Time     `json:"created_at"`
-	MessageText    string        `json:"message_text"`
 }
 
 type Room struct {
 	ID        int64     `json:"id"`
 	RoomName  string    `json:"room_name"`
-	CreatedBy string    `json:"created_by"`
+	CreatedBy int64     `json:"created_by"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type User struct {
 	ID        int64     `json:"id"`
 	Username  string    `json:"username"`
+	Password  string    `json:"password"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

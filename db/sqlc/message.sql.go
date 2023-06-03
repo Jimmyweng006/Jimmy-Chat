@@ -18,7 +18,7 @@ INSERT INTO messages (
   message_text
 ) VALUES (
   $1, $2, $3, $4
-) RETURNING id, room_id, reply_message_id, sender_id, modified_at, created_at, message_text
+) RETURNING id, room_id, reply_message_id, sender_id, message_text, modified_at, created_at
 `
 
 type CreateMessageParams struct {
@@ -41,9 +41,9 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		&i.RoomID,
 		&i.ReplyMessageID,
 		&i.SenderID,
+		&i.MessageText,
 		&i.ModifiedAt,
 		&i.CreatedAt,
-		&i.MessageText,
 	)
 	return i, err
 }

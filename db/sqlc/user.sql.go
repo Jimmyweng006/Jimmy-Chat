@@ -11,27 +11,43 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
-  username
+  username,
+  password
 ) VALUES (
-  $1
-) RETURNING id, username, created_at
+  $1, $2
+) RETURNING id, username, password, created_at
 `
 
-func (q *Queries) CreateUser(ctx context.Context, username string) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, username)
+type CreateUserParams struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser, arg.Username, arg.Password)
 	var i User
-	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
 const findUser = `-- name: FindUser :one
-SELECT id, username, created_at FROM users
+SELECT id, username, password, created_at FROM users
 WHERE username = $1
 `
 
 func (q *Queries) FindUser(ctx context.Context, username string) (User, error) {
 	row := q.db.QueryRowContext(ctx, findUser, username)
 	var i User
-	err := row.Scan(&i.ID, &i.Username, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.CreatedAt,
+	)
 	return i, err
 }
