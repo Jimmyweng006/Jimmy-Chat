@@ -28,6 +28,11 @@
 * 2023/06/03
     1. 先定義好domain的interface(repository, usecase)，再來寫實作...
     2. 依照Clean Architecture的架構，完成client end & server end, User singIn的功能
+* 2023/06/04
+    1. LogIn功能
+    2. 目前預計只有一個公共頻道
+    3. 依照User的架構，弄一個Message在Domain Layer裡
+    4. 要做到"logIn before chating"好像有點麻煩...
 * 代辦
     1. 多個用戶加入頻道內聊天
         1. client request server 建立頻道
@@ -36,9 +41,10 @@
         4. ~~client request server 發言，server顯示用戶A的發言給在頻道內的所有人~~ done
     2. ~~用database儲存頻道聊天訊息~~ done
     3. logIn/signIn
-        1. signIn
-        2. user password encryption
-        3. verify user
+        1. ~~signIn~~
+        2. ~~user password encryption~~
+        3. ~~verify user~~
+        4. logIn before chating!!!
 
 ## Debug
 

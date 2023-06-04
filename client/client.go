@@ -13,7 +13,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
@@ -35,6 +34,8 @@ func main() {
 		switch command {
 		case "signIn":
 			signIn(scanner)
+		case "logIn":
+			logIn(scanner)
 		case "chat":
 			chat(scanner)
 		case "exit":
@@ -65,12 +66,6 @@ func signIn(scanner *bufio.Scanner) {
 	fmt.Print("password: ")
 	scanner.Scan()
 	password := scanner.Text()
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Hashed Password:", string(hashedPassword))
 
 	// start request
 	data := UserData{
@@ -86,7 +81,58 @@ func signIn(scanner *bufio.Scanner) {
 
 	client := &http.Client{}
 
-	request, err := http.NewRequest("POST", "http://localhost:8080/signin", bytes.NewBuffer(reqBody))
+	request, err := http.NewRequest("POST", "http://localhost:8080/signIn", bytes.NewBuffer(reqBody))
+	if err != nil {
+		log.Fatal("generate request error:", err)
+		return
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		log.Fatal("send request error:", err)
+		return
+	}
+
+	defer response.Body.Close()
+
+	respBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		fmt.Println("read response error:", err)
+		return
+	}
+
+	fmt.Println("respBody:", string(respBody))
+}
+
+func logIn(scanner *bufio.Scanner) {
+	// retrieve username and password(hashed)
+	fmt.Println("please type in username")
+	fmt.Print("username: ")
+	scanner.Scan()
+	username := scanner.Text()
+
+	fmt.Println()
+
+	fmt.Println("please type in password")
+	fmt.Print("password: ")
+	scanner.Scan()
+	password := scanner.Text()
+
+	// start request
+	data := UserData{
+		Username: username,
+		Password: password,
+	}
+
+	reqBody, err := json.Marshal(data)
+	if err != nil {
+		log.Fatal("construct user signIn body error:", err)
+		return
+	}
+
+	client := &http.Client{}
+
+	request, err := http.NewRequest("POST", "http://localhost:8080/logIn", bytes.NewBuffer(reqBody))
 	if err != nil {
 		log.Fatal("generate request error:", err)
 		return
