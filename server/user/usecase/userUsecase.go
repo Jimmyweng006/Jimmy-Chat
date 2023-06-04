@@ -6,18 +6,18 @@ import (
 	"github.com/Jimmyweng006/Jimmy-Chat/server/domain"
 	"github.com/sirupsen/logrus"
 
-	model "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
+	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
 )
 
-type userUsercase struct {
+type userUsecase struct {
 	userRepository domain.UserRepository
 }
 
 func NewUserUsecase(repository domain.UserRepository) domain.UserUsecase {
-	return &userUsercase{repository}
+	return &userUsecase{repository}
 }
 
-func (u *userUsercase) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+func (u *userUsecase) GetByUsername(ctx context.Context, username string) (*db.User, error) {
 	user, err := u.userRepository.GetByUsername(ctx, username)
 	if err != nil {
 		logrus.Error(err)
@@ -26,7 +26,7 @@ func (u *userUsercase) GetByUsername(ctx context.Context, username string) (*mod
 	return user, nil
 }
 
-func (u *userUsercase) Store(ctx context.Context, user *model.User) error {
+func (u *userUsecase) Store(ctx context.Context, user *db.User) error {
 	err := u.userRepository.Store(ctx, user)
 	if err != nil {
 		logrus.Error(err)
