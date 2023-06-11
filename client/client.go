@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -18,40 +19,55 @@ import (
 func main() {
 
 	scanner := bufio.NewScanner(os.Stdin)
+	waitForChat := make(chan struct{})
+	var wg sync.WaitGroup
 
-	for {
-		fmt.Println("possible command as below, please type exactly")
-		fmt.Println("signIn: will prompt input username and password")
-		fmt.Println("logIn")
-		fmt.Println("logOut")
-		fmt.Println("chat: please logIn before start chating")
-		fmt.Println("exit")
-		fmt.Print("please input available command: ")
+	go func() {
+		for {
+			// menu functionality
+			fmt.Println("possible command as below, please type exactly")
+			fmt.Println("signIn: will prompt input username and password")
+			fmt.Println("logIn")
+			fmt.Println("logOut")
+			fmt.Println("chat: please logIn before start chating")
+			fmt.Println("exit")
+			fmt.Print("please input available command: ")
 
-		scanner.Scan()
-		command := scanner.Text()
+			scanner.Scan()
+			command := scanner.Text()
 
-		switch command {
-		case "signIn":
-			signIn(scanner)
-		case "logIn":
-			logIn(scanner)
-		case "chat":
-			chat(scanner)
-		case "exit":
-			fmt.Println("client program exit")
-			return
-		default:
-			fmt.Println("invalid command")
+			switch command {
+			case "signIn":
+				signIn(scanner)
+			case "logIn":
+				logIn(scanner)
+			case "chat":
+				wg.Add(1) // 增加等待計數器
+
+				go func() {
+					chat(scanner)
+					// wg.Done(), not execute to block main goroutine
+				}()
+
+				wg.Wait() // 等待 chat 函式完成
+			case "exit":
+				fmt.Println("client program exit")
+				return
+			default:
+				fmt.Println("invalid command")
+			}
 		}
-	}
+	}()
 
+	<-waitForChat // 等待 chat 函式完成後才結束主程式
 }
 
 type UserData struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
+
+var token = ""
 
 func signIn(scanner *bufio.Scanner) {
 	// retrieve username and password(hashed)
@@ -153,13 +169,22 @@ func logIn(scanner *bufio.Scanner) {
 	}
 
 	fmt.Println("respBody:", string(respBody))
+	token = string(respBody)
 }
 
 func chat(scanner *bufio.Scanner) {
-	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/chat"}
+	u := url.URL{
+		Scheme:   "ws",
+		Host:     "localhost:8080",
+		Path:     "/chat",
+		RawQuery: fmt.Sprintf("token=%s", token),
+	}
+
+	logrus.Infof("url: %s", u.String())
 	connection, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		logrus.Error("dial erro:", err)
+		logrus.Error("dial error:", err)
+		return
 	}
 
 	go handleUserInput(connection, scanner)
@@ -168,10 +193,10 @@ func chat(scanner *bufio.Scanner) {
 }
 
 func handleUserInput(connection *websocket.Conn, scanner *bufio.Scanner) {
-	logrus.Info("handleUserInput() start...")
+	// logrus.Info("handleUserInput() start...")
 
 	for {
-		// fmt.Print("\nEnter message: ")
+		fmt.Print("\nEnter message: ")
 		scanner.Scan()
 		message := scanner.Text()
 
@@ -181,25 +206,25 @@ func handleUserInput(connection *websocket.Conn, scanner *bufio.Scanner) {
 			return
 		}
 
-		logrus.Info("handleUserInput() end...")
+		// logrus.Info("handleUserInput() end...")
 	}
 }
 
 func listenToServer(connection *websocket.Conn) {
-	logrus.Info("listenToServer() start...")
+	// logrus.Info("listenToServer() start...")
 	defer func() {
 		connection.Close()
 	}()
 
 	for {
-		logrus.Info("start reading from server with message")
+		// logrus.Info("start reading from server with message")
 		_, echoMessage, err := connection.ReadMessage()
 		if err != nil {
-			logrus.Error("error in reading from server: %v", err)
+			logrus.Error("error in reading from server: ", err)
 			break
 		}
 		logrus.Info(string(echoMessage))
 
-		logrus.Info("listenToServer() end...")
+		// logrus.Info("listenToServer() end...")
 	}
 }

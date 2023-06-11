@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
 	"github.com/Jimmyweng006/Jimmy-Chat/server/domain"
-	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -35,28 +38,12 @@ type Message struct {
 var clientsMap = make(map[*client]bool)
 var broadcastChannel = make(chan Message)
 
-// session related config
-var (
-	store *sessions.CookieStore
-)
-
-const (
-	sessionName   = "my-session"
-	sessionUserID = "user-id"
-)
+// JWT config
+var secretKey = []byte("your-secret-key")
 
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-}
-
-func init() {
-	store = sessions.NewCookieStore([]byte("secret-key"))
-	store.Options = &sessions.Options{
-		Path:     "/",
-		MaxAge:   86400, // 1天
-		HttpOnly: true,
-	}
 }
 
 type UserHandler struct {
@@ -146,14 +133,23 @@ func (h *UserHandler) LogInHandler(w http.ResponseWriter, r *http.Request) {
 
 		err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(password))
 		if err == nil {
-			session, _ := store.Get(r, sessionName)
-			session.Values[sessionUserID] = userData.ID
-			logrus.Infof("user session: %v", session)
-			logrus.Infof("user session value: %v", session.Values)
-			session.Save(r, w)
+			// 生成 JWT
+			token := jwt.New(jwt.SigningMethodHS256)
+			claims := token.Claims.(jwt.MapClaims)
+			claims["user_id"] = userData.ID
+			claims["exp"] = time.Now().Add(time.Hour * 24).Unix() // 設定過期時間為 1 天
 
-			w.WriteHeader(http.StatusOK)
-			fmt.Fprint(w, "login successfully")
+			// 簽署 JWT
+			signedToken, err := token.SignedString(secretKey)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// 將 JWT 發送給客戶端
+			w.Write([]byte(signedToken))
+
+			logrus.Infof("user:%s login successfully", userData.Username)
 			return
 		} else {
 			http.Error(w, "password not match", http.StatusBadRequest)
@@ -164,41 +160,55 @@ func (h *UserHandler) LogInHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) ChatHandler(w http.ResponseWriter, r *http.Request) {
+	tokenFromURL := extractTokenFromURL(r.URL)
+
+	// 驗證 JWT
+	token, err := jwt.Parse(tokenFromURL, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+	if err != nil || !token.Valid {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logrus.Error(err)
 		return
 	}
 
-	session, _ := store.Get(r, sessionName)
-
-	// assertion to check value in session.Values[sessionUserID] is int -> if ok means user has logined
-	if clientID, ok := session.Values[sessionUserID].(int); !ok {
-		logrus.Infof("what is session %v", session.Values)
-		logrus.Infof("what is session value %d", session.Values[sessionUserID])
-		logrus.Error("user authentication fail")
-		// http.Redirect(w, r, "/login", http.StatusSeeOther)
-		http.Error(w, "start chating error", http.StatusBadRequest)
+	// 提取使用者 ID
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
-	} else {
-		// conn, err := upgrader.Upgrade(w, r, nil)
-		// if err != nil {
-		// 	logrus.Error(err)
-		// 	return
-		// }
+	}
+	clientID := claims["user_id"].(float64)
 
-		logrus.Infof("New client: %s connected\n", clientID)
-
-		c := &client{conn: conn, clientID: strconv.Itoa(clientID)}
-		clientsMap[c] = true
-
-		// a separate goroutine to listen on client
-		go listenToClient(c)
-
-		// one goroutine to handle broadcast
-		go broadcast(h)
+	logrus.Infof("New client: %f connected\n", clientID)
+	c := &client{
+		conn:     conn,
+		clientID: strconv.Itoa(int(clientID)),
 	}
 
+	clientsMap[c] = true
+
+	// a separate goroutine to listen on client
+	go listenToClient(c)
+
+	// one goroutine to handle broadcast
+	go broadcast(h)
+
+}
+
+func extractTokenFromURL(url *url.URL) string {
+	token := ""
+	query := url.Query()
+	if tokens, ok := query["token"]; ok && len(tokens) > 0 {
+		token = tokens[0]
+	}
+
+	return token
 }
 
 func listenToClient(c *client) {
@@ -212,7 +222,7 @@ func listenToClient(c *client) {
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
-			logrus.Error("error in listening: %v", err)
+			logrus.Error("error in listening: ", err)
 			delete(clientsMap, c)
 			break
 		}
@@ -233,31 +243,33 @@ func broadcast(h *UserHandler) {
 		messageObject := <-broadcastChannel
 		logrus.Infof("messageObject info %v", messageObject)
 
-		senderData, err := h.UserUsecase.GetByUsername(context.Background(), messageObject.Sender)
+		senderID, err := strconv.Atoi(messageObject.Sender)
 		if err != nil {
 			logrus.Error(err)
+			return
 		}
-		logrus.Infof("senderObject info %v", senderData)
 
 		err = h.MessageUsecase.Store(context.Background(), &db.Message{
-			RoomID:         123,
+			RoomID:         1, // 1 mean public room
 			ReplyMessageID: sql.NullInt64{Valid: false},
-			SenderID:       senderData.ID,
+			SenderID:       int64(senderID),
 			MessageText:    string(messageObject.Content),
 		})
 		if err != nil {
 			logrus.Error(err)
+			return
 		}
 
 		for c := range clientsMap {
 			logrus.Infof("start writing to client %s with message ---> %s\n", c.clientID, string(messageObject.Content))
 
-			messageSend := fmt.Sprintf(senderData.Username + ": " + string(messageObject.Content))
+			messageSend := fmt.Sprintf("User %d: %s", senderID, messageObject.Content)
 			err := c.conn.WriteMessage(websocket.TextMessage, []byte(messageSend))
 			if err != nil {
-				logrus.Error("error in broadcast: %v", err)
+				logrus.Error("error in broadcast: ", err)
 				c.conn.Close()
 				delete(clientsMap, c)
+				return
 			}
 		}
 

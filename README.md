@@ -33,6 +33,12 @@
     2. 目前預計只有一個公共頻道
     3. 依照User的架構，弄一個Message在Domain Layer裡
     4. 要做到"logIn before chating"好像有點麻煩...
+* 2023/06/11
+    1. 要做到"logIn before chating"好像有點麻煩... -> 改用JWT的方式來處理驗證身份功能
+    2. user開始chatting後會跑出一開始的提示menu -> WaitGroup -> 乖乖block main goroutine就好啦...
+    3. ~~除了GetByUsername(logIn的時候會用到)，還要GetByUserID，這樣才能跟後面的createMessage整合~~ -> ID的資訊其實只要把client object傳進來就能拿到了...
+    4. ~~ID的資訊其實只要把client object傳進來就能拿到了...~~ -> ID的資訊應該在message struct裡... 也就是該這樣寫 senderID, err := strconv.Atoi(messageObject.Sender)
+    
 * 代辦
     1. 多個用戶加入頻道內聊天
         1. client request server 建立頻道
@@ -44,7 +50,7 @@
         1. ~~signIn~~
         2. ~~user password encryption~~
         3. ~~verify user~~
-        4. logIn before chating!!!
+        4. ~~logIn before chating!!!~~
 
 ## Debug
 
