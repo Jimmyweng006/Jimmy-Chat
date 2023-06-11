@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/segmentio/kafka-go"
 
 	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
 	"github.com/Jimmyweng006/Jimmy-Chat/server/domain"
@@ -45,6 +46,9 @@ type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
+
+// Kafka config
+var kafkaTopic = "public-room"
 
 type UserHandler struct {
 	UserUsecase    domain.UserUsecase
@@ -219,6 +223,22 @@ func listenToClient(c *client) {
 		delete(clientsMap, c)
 	}()
 
+	// 設定 Kafka 連線相關設定
+	brokers := []string{"kafka:9092"}
+	dialer := &kafka.Dialer{
+		Timeout:   10 * time.Second,
+		DualStack: true,
+	}
+
+	// 建立 Kafka Writer
+	writer := kafka.NewWriter(kafka.WriterConfig{
+		Brokers: brokers,
+		Topic:   kafkaTopic,
+		Dialer:  dialer,
+	})
+
+	defer writer.Close()
+
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
@@ -228,9 +248,27 @@ func listenToClient(c *client) {
 		}
 
 		logrus.Infof("start reading from client %s with message ---> %s \n", c.clientID, string(message))
-		broadcastChannel <- Message{
+		// broadcastChannel <- Message{
+		// 	Sender:  c.clientID,
+		// 	Content: message,
+		// }
+
+		messageObj := Message{
 			Sender:  c.clientID,
 			Content: message,
+		}
+		messageForKafka, err := json.Marshal(messageObj)
+		if err != nil {
+			logrus.Fatal("construct user signIn body error:", err)
+		}
+
+		// 將訊息寫入 Kafka
+		logrus.Infof("Send message to Kafka: %s\n", messageForKafka)
+		err = writer.WriteMessages(context.Background(), kafka.Message{
+			Value: messageForKafka,
+		})
+		if err != nil {
+			logrus.Fatal("Error writing message: ", err)
 		}
 
 		logrus.Info("listenToClient() end...")
@@ -239,9 +277,38 @@ func listenToClient(c *client) {
 
 func broadcast(h *UserHandler) {
 	logrus.Info("broadcast() start...")
+
+	// 設定 Kafka 連線相關設定
+	brokers := []string{"kafka:9092"}
+	dialer := &kafka.Dialer{
+		Timeout:   10 * time.Second,
+		DualStack: true,
+	}
+
+	// 建立 Kafka Reader
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers: brokers,
+		Topic:   kafkaTopic,
+		// GroupID: "your-group-id",
+		Dialer: dialer,
+	})
+
+	defer reader.Close()
+
 	for {
-		messageObject := <-broadcastChannel
-		logrus.Infof("messageObject info %v", messageObject)
+		// messageObject := <-broadcastChannel
+		// logrus.Infof("messageObject info %v", messageObject)
+		message, err := reader.ReadMessage(context.Background())
+		if err != nil {
+			logrus.Fatal("Error reading message: ", err)
+		}
+		logrus.Infof("Received message from Kafka: %s\n", message.Value)
+
+		var messageObject Message
+		if err := json.Unmarshal(message.Value, &messageObject); err != nil {
+			logrus.Error("Parse message from Kafka error", err)
+			return
+		}
 
 		senderID, err := strconv.Atoi(messageObject.Sender)
 		if err != nil {

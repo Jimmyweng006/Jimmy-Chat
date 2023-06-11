@@ -38,6 +38,9 @@
     2. user開始chatting後會跑出一開始的提示menu -> WaitGroup -> 乖乖block main goroutine就好啦...
     3. ~~除了GetByUsername(logIn的時候會用到)，還要GetByUserID，這樣才能跟後面的createMessage整合~~ -> ID的資訊其實只要把client object傳進來就能拿到了...
     4. ~~ID的資訊其實只要把client object傳進來就能拿到了...~~ -> ID的資訊應該在message struct裡... 也就是該這樣寫 senderID, err := strconv.Atoi(messageObject.Sender)
+    5. 把kafka的服務整合到，傳訊息給聊天室其他user的code裡面！
+        1. brokers 要使用 []string{"kafka:9092"}, 而不是 []string{"localhost:9092"}...
+        2. 怎麼會有還沒write就能read的奇怪問題發生... "Received message from Kafka: \"MTIz\"\n"
     
 * 代辦
     1. 多個用戶加入頻道內聊天
