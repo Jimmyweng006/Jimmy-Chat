@@ -7,11 +7,13 @@ import (
 )
 
 type UserRepository interface {
-	GetByUsername(ctx context.Context, Username string) (*db.User, error)
+	GetByUsername(ctx context.Context, username string) (*db.User, error)
+	GetByUserID(ctx context.Context, id int64) (*db.User, error)
 	Store(ctx context.Context, u *db.User) error
 }
 
 type UserUsecase interface {
-	GetByUsername(ctx context.Context, Username string) (*db.User, error)
+	GetByUsername(ctx context.Context, username string) (*db.User, error)
+	GetByUserID(ctx context.Context, id int64) (*db.User, error)
 	Store(ctx context.Context, u *db.User) error
 }

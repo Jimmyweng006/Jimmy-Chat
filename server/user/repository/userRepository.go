@@ -18,7 +18,16 @@ func NewUserRepository(query *db.Queries) domain.UserRepository {
 }
 
 func (u *userRepository) GetByUsername(ctx context.Context, username string) (*db.User, error) {
-	user, err := u.query.FindUser(ctx, username)
+	user, err := u.query.FindUserByUsername(ctx, username)
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	return &user, nil
+}
+
+func (u *userRepository) GetByUserID(ctx context.Context, id int64) (*db.User, error) {
+	user, err := u.query.FindUserByID(ctx, id)
 	if err != nil {
 		logrus.Error(err)
 	}

@@ -26,6 +26,15 @@ func (u *userUsecase) GetByUsername(ctx context.Context, username string) (*db.U
 	return user, nil
 }
 
+func (u *userUsecase) GetByUserID(ctx context.Context, id int64) (*db.User, error) {
+	user, err := u.userRepository.GetByUserID(context.Background(), id)
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	return user, nil
+}
+
 func (u *userUsecase) Store(ctx context.Context, user *db.User) error {
 	err := u.userRepository.Store(ctx, user)
 	if err != nil {
