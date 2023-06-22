@@ -41,7 +41,14 @@
     5. 把kafka的服務整合到，傳訊息給聊天室其他user的code裡面！
         1. brokers 要使用 []string{"kafka:9092"}, 而不是 []string{"localhost:9092"}...
         2. 怎麼會有還沒write就能read的奇怪問題發生... "Received message from Kafka: \"MTIz\"\n"
-    
+        3. 奇怪的字的問題應該是webSocket讀到的資料([]byte)再去做Marshal([]byte)導致的...
+* 2023/06/12
+    1. 好不容易把kafka-ui也整合進docker了，結果看不到資料？？？
+    2. kafka資料會重複讀 -> multiple reader problem
+* 2023/06/22
+    1. Kafka knowledge
+    2. get user data by user id function
+
 * 代辦
     1. 多個用戶加入頻道內聊天
         1. client request server 建立頻道
@@ -54,7 +61,27 @@
         2. ~~user password encryption~~
         3. ~~verify user~~
         4. ~~logIn before chating!!!~~
+    4. 用Kafka減緩Chat Server傳送大量訊息的壓力
+    5. 拿到聊天室的聊天資訊
+        1. 比較從Redis拿資料跟直接從Postgres拿資料的效能差異
+
+## Learning
+
+### Kafka
+
+1. Top-Down Hierarchy
+    1. Cluster: 多個Broker組成Cluster
+    2. Broker: 類似Server的概念
+    3. Topic:
+    4. Partition:
+    5. Record: {Key, Value, TimeStamp}
+    6. Batch: 多筆Record成為一個Batch，再寫入Kafka。
 
 ## Debug
 
 1. 開始新的project, 不管怎樣先執行go mod init github.com/your-username/your-project-name 就對惹
+
+## Reference
+
+1. [DB table design](https://dbdiagram.io/d/644fb728dca9fb07c44eff8b)
+2. [Kafka](https://ithelp.ithome.com.tw/users/20140255/ironman/4026?page=1)
