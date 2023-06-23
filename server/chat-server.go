@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
+	mq "github.com/Jimmyweng006/Jimmy-Chat/server/messageQueue"
 	"github.com/Jimmyweng006/Jimmy-Chat/server/user/delivery"
 	userRepository "github.com/Jimmyweng006/Jimmy-Chat/server/user/repository"
 	UserUsecase "github.com/Jimmyweng006/Jimmy-Chat/server/user/usecase"
+	"github.com/segmentio/kafka-go"
 
 	messageRepository "github.com/Jimmyweng006/Jimmy-Chat/server/message/repository"
 	messageUsecase "github.com/Jimmyweng006/Jimmy-Chat/server/message/usecase"
@@ -41,10 +44,11 @@ var broadcastChannel = make(chan Message)
 
 const (
 	// HOST value should equal to service name in yaml.services
-	HOST     = "db"
-	DATABASE = "postgres"
-	USER     = "postgres"
-	PASSWORD = "root"
+	HOST       = "db"
+	DATABASE   = "postgres"
+	USER       = "postgres"
+	PASSWORD   = "root"
+	kafkaTopic = "public-room"
 )
 
 func main() {
@@ -82,14 +86,36 @@ func main() {
 
 	logrus.Info("Successfully created connection to database")
 
+	// Kagka setting
+	// 設定 Kafka 連線相關設定
+	brokers := []string{"broker:29091"}
+	dialer := &kafka.Dialer{
+		Timeout:   10 * time.Second,
+		DualStack: true,
+	}
+	// 建立 Kafka Reader
+	readerConfig := kafka.ReaderConfig{
+		Brokers: brokers,
+		Topic:   kafkaTopic,
+		Dialer:  dialer,
+	}
+	// 建立 Kafka Writer
+	writerConfig := kafka.WriterConfig{
+		Brokers: brokers,
+		Topic:   kafkaTopic,
+		Dialer:  dialer,
+	}
+
 	// Clean Architecture injection
 	queryObject := db.New(dbConnection)
+	kafkaMessageQueue := mq.NewKafka(readerConfig, writerConfig)
+	messageQueueWrapper := mq.NewMessageQueueWrapper(kafkaMessageQueue)
 
 	userRepository := userRepository.NewUserRepository(queryObject)
 	userUsercase := UserUsecase.NewUserUsecase(userRepository)
 
 	messageRepository := messageRepository.NewMessageRepository(queryObject)
-	messageUsecase := messageUsecase.NewMessageUsecase(messageRepository)
+	messageUsecase := messageUsecase.NewMessageUsecase(messageRepository, messageQueueWrapper)
 
 	userHandler := delivery.NewHandler(userUsercase, messageUsecase)
 

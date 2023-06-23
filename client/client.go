@@ -193,7 +193,7 @@ func chat(scanner *bufio.Scanner) {
 }
 
 func handleUserInput(connection *websocket.Conn, scanner *bufio.Scanner) {
-	// logrus.Info("handleUserInput() start...")
+	logrus.Info("handleUserInput() start...")
 
 	for {
 		fmt.Print("\nEnter message: ")
@@ -211,7 +211,7 @@ func handleUserInput(connection *websocket.Conn, scanner *bufio.Scanner) {
 }
 
 func listenToServer(connection *websocket.Conn) {
-	// logrus.Info("listenToServer() start...")
+	logrus.Info("listenToServer() start...")
 	defer func() {
 		connection.Close()
 	}()
@@ -223,7 +223,8 @@ func listenToServer(connection *websocket.Conn) {
 			logrus.Error("error in reading from server: ", err)
 			break
 		}
-		logrus.Info(string(echoMessage))
+		// logrus.Info(string(echoMessage))
+		fmt.Printf("\n%s", echoMessage)
 
 		// logrus.Info("listenToServer() end...")
 	}

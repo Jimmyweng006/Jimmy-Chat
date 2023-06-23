@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/segmentio/kafka-go"
 
 	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
 	"github.com/Jimmyweng006/Jimmy-Chat/server/domain"
@@ -33,7 +32,7 @@ type client struct {
 
 type Message struct {
 	Sender  string
-	Content []byte
+	Content string
 }
 
 var clientsMap = make(map[*client]bool)
@@ -198,11 +197,10 @@ func (h *UserHandler) ChatHandler(w http.ResponseWriter, r *http.Request) {
 	clientsMap[c] = true
 
 	// a separate goroutine to listen on client
-	go listenToClient(c)
+	go listenToClient(h, c)
 
 	// one goroutine to handle broadcast
 	go broadcast(h)
-
 }
 
 func extractTokenFromURL(url *url.URL) string {
@@ -215,7 +213,7 @@ func extractTokenFromURL(url *url.URL) string {
 	return token
 }
 
-func listenToClient(c *client) {
+func listenToClient(h *UserHandler, c *client) {
 	logrus.Info("listenToClient() start...")
 	defer func() {
 		logrus.Infof("Client disconnected: %s\n", c.clientID)
@@ -223,21 +221,7 @@ func listenToClient(c *client) {
 		delete(clientsMap, c)
 	}()
 
-	// 設定 Kafka 連線相關設定
-	brokers := []string{"kafka:9092"}
-	dialer := &kafka.Dialer{
-		Timeout:   10 * time.Second,
-		DualStack: true,
-	}
-
-	// 建立 Kafka Writer
-	writer := kafka.NewWriter(kafka.WriterConfig{
-		Brokers: brokers,
-		Topic:   kafkaTopic,
-		Dialer:  dialer,
-	})
-
-	defer writer.Close()
+	defer h.MessageUsecase.CloseMessageQueueWriter()
 
 	for {
 		_, message, err := c.conn.ReadMessage()
@@ -248,14 +232,10 @@ func listenToClient(c *client) {
 		}
 
 		logrus.Infof("start reading from client %s with message ---> %s \n", c.clientID, string(message))
-		// broadcastChannel <- Message{
-		// 	Sender:  c.clientID,
-		// 	Content: message,
-		// }
 
 		messageObj := Message{
 			Sender:  c.clientID,
-			Content: message,
+			Content: string(message),
 		}
 		messageForKafka, err := json.Marshal(messageObj)
 		if err != nil {
@@ -264,9 +244,7 @@ func listenToClient(c *client) {
 
 		// 將訊息寫入 Kafka
 		logrus.Infof("Send message to Kafka: %s\n", messageForKafka)
-		err = writer.WriteMessages(context.Background(), kafka.Message{
-			Value: messageForKafka,
-		})
+		err = h.MessageUsecase.WriteMessageToMessageQueue(context.Background(), messageForKafka)
 		if err != nil {
 			logrus.Fatal("Error writing message: ", err)
 		}
@@ -278,37 +256,22 @@ func listenToClient(c *client) {
 func broadcast(h *UserHandler) {
 	logrus.Info("broadcast() start...")
 
-	// 設定 Kafka 連線相關設定
-	brokers := []string{"kafka:9092"}
-	dialer := &kafka.Dialer{
-		Timeout:   10 * time.Second,
-		DualStack: true,
-	}
-
-	// 建立 Kafka Reader
-	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: brokers,
-		Topic:   kafkaTopic,
-		// GroupID: "your-group-id",
-		Dialer: dialer,
-	})
-
-	defer reader.Close()
+	defer h.MessageUsecase.CloseMessageQueueReader()
 
 	for {
-		// messageObject := <-broadcastChannel
-		// logrus.Infof("messageObject info %v", messageObject)
-		message, err := reader.ReadMessage(context.Background())
+		message, err := h.MessageUsecase.ReadMessageFromMessageQueue(context.Background())
 		if err != nil {
 			logrus.Fatal("Error reading message: ", err)
 		}
-		logrus.Infof("Received message from Kafka: %s\n", message.Value)
+		logrus.Infof("Received message from Kafka: %s\n", message)
 
 		var messageObject Message
-		if err := json.Unmarshal(message.Value, &messageObject); err != nil {
+		if err := json.Unmarshal(message, &messageObject); err != nil {
 			logrus.Error("Parse message from Kafka error", err)
 			return
 		}
+
+		logrus.Infof("messageObject: %v", messageObject)
 
 		senderID, err := strconv.Atoi(messageObject.Sender)
 		if err != nil {
@@ -327,10 +290,16 @@ func broadcast(h *UserHandler) {
 			return
 		}
 
+		user, err := h.UserUsecase.GetByUserID(context.Background(), int64(senderID))
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+
 		for c := range clientsMap {
 			logrus.Infof("start writing to client %s with message ---> %s\n", c.clientID, string(messageObject.Content))
 
-			messageSend := fmt.Sprintf("User %d: %s", senderID, messageObject.Content)
+			messageSend := fmt.Sprintf("User %s: %s", user.Username, messageObject.Content)
 			err := c.conn.WriteMessage(websocket.TextMessage, []byte(messageSend))
 			if err != nil {
 				logrus.Error("error in broadcast: ", err)

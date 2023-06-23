@@ -39,7 +39,7 @@
     3. ~~除了GetByUsername(logIn的時候會用到)，還要GetByUserID，這樣才能跟後面的createMessage整合~~ -> ID的資訊其實只要把client object傳進來就能拿到了...
     4. ~~ID的資訊其實只要把client object傳進來就能拿到了...~~ -> ID的資訊應該在message struct裡... 也就是該這樣寫 senderID, err := strconv.Atoi(messageObject.Sender)
     5. 把kafka的服務整合到，傳訊息給聊天室其他user的code裡面！
-        1. brokers 要使用 []string{"kafka:9092"}, 而不是 []string{"localhost:9092"}...
+        1. brokers 要使用 []string{"kafka:9092"}, 而不是 []string{"localhost:9092"}... -> broker:29091 -> KAFKA_BOOTSTRAP.SERVERS
         2. 怎麼會有還沒write就能read的奇怪問題發生... "Received message from Kafka: \"MTIz\"\n"
         3. 奇怪的字的問題應該是webSocket讀到的資料([]byte)再去做Marshal([]byte)導致的...
 * 2023/06/12
@@ -48,6 +48,16 @@
 * 2023/06/22
     1. Kafka knowledge
     2. get user data by user id function
+* 2023/06/23
+    1. Kafka knowledge
+    2. multiple reader problem -> 直接改成 1 reader & 1 writer後目前看來沒有奇怪的Bug，但效能問題的話要再壓測一下...
+    3. no required module provides package "github.com/Jimmyweng006/Jimmy-Chat/messageQueue -> 一直出現的奇怪問題？不知道是不是改成小寫或是重開VS Code，問題就解決了...
+    4. MessageQueueWrapper設計思考
+        1. 因為希望NewKafka()回傳的是Interface(如果之後要換不同的MQ比較方便)
+        2. 而且回傳的是指標類型(不用複製整個Struct效能應該好一些)
+        3. 所以參考db.Queries的設計弄出來了
+            1. type Queries struct <-> type MessageQueueWrapper struct
+            2. type DBTX interface <-> type MessageQueue interface
 
 * 代辦
     1. 多個用戶加入頻道內聊天
@@ -57,10 +67,10 @@
         4. ~~client request server 發言，server顯示用戶A的發言給在頻道內的所有人~~ done
     2. ~~用database儲存頻道聊天訊息~~ done
     3. logIn/signIn
-        1. ~~signIn~~
-        2. ~~user password encryption~~
-        3. ~~verify user~~
-        4. ~~logIn before chating!!!~~
+        1. ~~signIn~~ done
+        2. ~~user password encryption~~ done
+        3. ~~verify user~~ done
+        4. ~~logIn before chating!!!~~ done
     4. 用Kafka減緩Chat Server傳送大量訊息的壓力
     5. 拿到聊天室的聊天資訊
         1. 比較從Redis拿資料跟直接從Postgres拿資料的效能差異
@@ -69,13 +79,13 @@
 
 ### Kafka
 
-1. Top-Down Hierarchy
+1. Terminology(Top-Down Hierarchy)
     1. Cluster: 多個Broker組成Cluster
     2. Broker: 類似Server的概念
-    3. Topic:
-    4. Partition:
-    5. Record: {Key, Value, TimeStamp}
-    6. Batch: 多筆Record成為一個Batch，再寫入Kafka。
+    3. Topic: 類似DB的Table，但是只會一直加資料不會刪除資料。
+    4. Partition: Topic的所有資料再切分成一或多個區段，一個資料只會去到一個區段！
+    5. Offset: 下一次Consume的起始點
+    6. Replication: 同一筆資料存在幾台Broker上
 
 ## Debug
 
@@ -84,4 +94,6 @@
 ## Reference
 
 1. [DB table design](https://dbdiagram.io/d/644fb728dca9fb07c44eff8b)
-2. [Kafka](https://ithelp.ithome.com.tw/users/20140255/ironman/4026?page=1)
+2. Kafka
+    1. [introduce](https://chrisyen8341.medium.com/kafka%E8%B6%85%E6%96%B0%E6%89%8B%E5%85%A5%E9%96%80%E7%AC%AC%E4%B8%80%E7%9E%A5-9348a9cb23dc)
+    2. [setup](https://morosedog.gitlab.io/docker-20201116-docker17/)

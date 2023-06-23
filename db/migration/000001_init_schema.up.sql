@@ -55,3 +55,14 @@ ALTER TABLE "rooms" ADD FOREIGN KEY ("created_by") REFERENCES "users" ("id");
 ALTER TABLE "user_room" ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
 
 ALTER TABLE "user_room" ADD FOREIGN KEY ("room_id") REFERENCES "rooms" ("id");
+
+-- defalut value for tables
+
+-- users
+INSERT INTO public.users (username,"password",created_at) VALUES
+	 ('test1','$2a$10$lc7H443Zca.89milFvWoButsFT/CgRfS.OBP6Xe5tJlvX6THBmicm',now()),
+	 ('test2','$2a$10$lc7H443Zca.89milFvWoButsFT/CgRfS.OBP6Xe5tJlvX6THBmicm',now()),
+	 ('test3','$2a$10$tNgN.0zzMnfYu7CQePxQe.d/Z7/p12su.EdtorKD8FF/miTFVLN6a',now());
+
+-- rooms
+INSERT INTO public.rooms (room_name,created_by,created_at) VALUES ('public',1,now());
