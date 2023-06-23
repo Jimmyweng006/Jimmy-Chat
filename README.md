@@ -43,7 +43,7 @@
         2. 怎麼會有還沒write就能read的奇怪問題發生... "Received message from Kafka: \"MTIz\"\n"
         3. 奇怪的字的問題應該是webSocket讀到的資料([]byte)再去做Marshal([]byte)導致的...
 * 2023/06/12
-    1. 好不容易把kafka-ui也整合進docker了，結果看不到資料？？？
+    1. 好不容易把kafka-ui也整合進docker了，結果看不到資料？？？ -> 簡單用個網路的範例confluentinc/cp-enterprise-control-center就好
     2. kafka資料會重複讀 -> multiple reader problem
 * 2023/06/22
     1. Kafka knowledge
@@ -55,7 +55,8 @@
     4. MessageQueueWrapper設計思考
         1. 因為希望NewKafka()回傳的是Interface(如果之後要換不同的MQ比較方便)
         2. 而且回傳的是指標類型(不用複製整個Struct效能應該好一些)
-        3. 所以參考db.Queries的設計弄出來了
+        3. 不再多用type MessageQueueWrapper struct包一層的話，回來的資料型態會是指標介面，這樣的話無法使用介面的方法...
+        4. 所以參考db.Queries的設計弄出來了，下面是對應關係
             1. type Queries struct <-> type MessageQueueWrapper struct
             2. type DBTX interface <-> type MessageQueue interface
 
