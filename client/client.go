@@ -224,7 +224,7 @@ func listenToServer(connection *websocket.Conn) {
 			break
 		}
 		// logrus.Info(string(echoMessage))
-		fmt.Printf("\n%s", echoMessage)
+		fmt.Printf("\n%s\n", echoMessage)
 
 		// logrus.Info("listenToServer() end...")
 	}
