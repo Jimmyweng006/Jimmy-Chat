@@ -13,7 +13,7 @@ type MessageRepository interface {
 type MessageUsecase interface {
 	Store(ctx context.Context, m *db.Message) error
 	ReadMessageFromMessageQueue(ctx context.Context) ([]byte, error)
-	WriteMessageToMessageQueue(ctx context.Context, message []byte) error
+	WriteMessagesToMessageQueue(ctx context.Context, messages [][]byte) error
 	CloseMessageQueueReader() error
 	CloseMessageQueueWriter() error
 }

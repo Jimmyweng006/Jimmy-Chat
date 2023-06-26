@@ -8,7 +8,7 @@ import (
 
 type MessageQueue interface {
 	ReadMessage(ctx context.Context) ([]byte, error)
-	WriteMessage(ctx context.Context, message []byte) error
+	WriteMessages(ctx context.Context, message [][]byte) error
 	CloseReader() error
 	CloseWriter() error
 }
@@ -33,8 +33,8 @@ func (m *MessageQueueWrapper) ReadMessage(ctx context.Context) ([]byte, error) {
 	return message, nil
 }
 
-func (m *MessageQueueWrapper) WriteMessage(ctx context.Context, message []byte) error {
-	err := m.messageQueue.WriteMessage(ctx, message)
+func (m *MessageQueueWrapper) WriteMessages(ctx context.Context, messages [][]byte) error {
+	err := m.messageQueue.WriteMessages(ctx, messages)
 
 	return err
 }
@@ -72,10 +72,15 @@ func (k *Kafka) ReadMessage(ctx context.Context) ([]byte, error) {
 	return message.Value, nil
 }
 
-func (k *Kafka) WriteMessage(ctx context.Context, message []byte) error {
-	err := k.writer.WriteMessages(ctx, kafka.Message{
-		Value: message,
-	})
+func (k *Kafka) WriteMessages(ctx context.Context, messages [][]byte) error {
+	kafkaMessages := make([]kafka.Message, len(messages))
+	for i := 0; i < len(messages); i++ {
+		kafkaMessages[i] = kafka.Message{
+			Value: messages[i],
+		}
+	}
+
+	err := k.writer.WriteMessages(ctx, kafkaMessages...)
 
 	return err
 }

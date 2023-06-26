@@ -40,8 +40,8 @@ func (m *messageUsecase) ReadMessageFromMessageQueue(ctx context.Context) ([]byt
 	return message, nil
 }
 
-func (m *messageUsecase) WriteMessageToMessageQueue(ctx context.Context, message []byte) error {
-	return m.messageEventQueue.WriteMessage(ctx, message)
+func (m *messageUsecase) WriteMessagesToMessageQueue(ctx context.Context, messages [][]byte) error {
+	return m.messageEventQueue.WriteMessages(ctx, messages)
 }
 
 func (m *messageUsecase) CloseMessageQueueReader() error {
