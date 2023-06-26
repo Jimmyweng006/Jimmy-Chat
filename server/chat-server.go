@@ -44,15 +44,16 @@ var broadcastChannel = make(chan Message)
 
 const (
 	// HOST value should equal to service name in yaml.services
-	HOST       = "db"
-	DATABASE   = "postgres"
-	USER       = "postgres"
-	PASSWORD   = "root"
-	kafkaTopic = "public-room"
+	HOST           = "db"
+	DATABASE       = "postgres"
+	USER           = "postgres"
+	PASSWORD       = "root"
+	KAFKA_TOPIC    = "public-room"
+	KAFKA_GROUP_ID = "public-room-group"
 )
 
 func main() {
-	// log setting
+	// Log setting
 	wd, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
@@ -87,22 +88,22 @@ func main() {
 	logrus.Info("Successfully created connection to database")
 
 	// Kagka setting
-	// 設定 Kafka 連線相關設定
 	brokers := []string{"broker:29091"}
 	dialer := &kafka.Dialer{
 		Timeout:   10 * time.Second,
 		DualStack: true,
 	}
-	// 建立 Kafka Reader
+	// Kafka Reader
 	readerConfig := kafka.ReaderConfig{
 		Brokers: brokers,
-		Topic:   kafkaTopic,
+		Topic:   KAFKA_TOPIC,
 		Dialer:  dialer,
+		GroupID: KAFKA_GROUP_ID,
 	}
-	// 建立 Kafka Writer
+	// Kafka Writer
 	writerConfig := kafka.WriterConfig{
 		Brokers: brokers,
-		Topic:   kafkaTopic,
+		Topic:   KAFKA_TOPIC,
 		Dialer:  dialer,
 	}
 
@@ -124,6 +125,9 @@ func main() {
 	http.HandleFunc("/logIn", userHandler.LogInHandler)
 	// http.HandleFunc("/logout", logOutHandler)
 	http.HandleFunc("/chat", userHandler.ChatHandler)
+
+	// one goroutine to handle broadcast
+	go delivery.Broadcast(userHandler, 3, readerConfig)
 
 	logrus.Info("server start on port: 8080")
 	logrus.Fatal(http.ListenAndServe(":8080", nil))

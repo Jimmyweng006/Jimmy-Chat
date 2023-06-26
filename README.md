@@ -59,6 +59,18 @@
         4. 所以參考db.Queries的設計弄出來了，下面是對應關係
             1. type Queries struct <-> type MessageQueueWrapper struct
             2. type DBTX interface <-> type MessageQueue interface
+* 2023/06/24
+    1. 先來準備壓力測試的工具
+        1. 折騰一番終於設定好Jmeter了... path for pepper-box-1.0.jar: /opt/homebrew/Cellar/jmeter/5.5/libexec/lib/ext
+        2. 結果local的Jmeter一直連不到docker內的Kafka...算了土法煉鋼直接hard code測試...
+* 2023/06/25
+    1. load testing: how much time it takes to perform 1000 write: 16m46.240430001s -> QPS約是1，厲害了...
+    2. 無法控制使用者寫的速度，那就先來改善reader的效率吧... -> 等等寫也很慢啊...
+    3. 重新啟動server後，在Kafka的舊資料又會被重新讀一次 -> 應該要更新offset??? -> ReadMessage automatically commits offsets when using consumer groups.
+    4. 要enhance成多個reader的話在現有架構要怎麼改呢...
+* 2023/06/26
+    1. enhance writer(writeMessage -> writeMessages)功能後，怎麼client一使用/chat就斷線... -> panic: runtime error: index out of range [201] with length 201，還敢忘記MOD啊....
+    2. one writer & 3 reader(?), 處理1000筆資料的時間大約是5s左右... -> 之後嘗試更多筆資料(1w以上)看看！
 
 * 代辦
     1. 多個用戶加入頻道內聊天
@@ -73,6 +85,7 @@
         3. ~~verify user~~ done
         4. ~~logIn before chating!!!~~ done
     4. 用Kafka減緩Chat Server傳送大量訊息的壓力
+        1. 比較multiple reader/writer 跟 1 reader/writer的效能差異
     5. 拿到聊天室的聊天資訊
         1. 比較從Redis拿資料跟直接從Postgres拿資料的效能差異
 
