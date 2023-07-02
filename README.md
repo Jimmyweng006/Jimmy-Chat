@@ -105,6 +105,16 @@
 
 1. 開始新的project, 不管怎樣先執行go mod init github.com/your-username/your-project-name 就對惹
 
+### Postgres
+
+```
+Identify what is running in port 5432: sudo lsof -i :5432
+
+Kill all the processes that are running under this port: sudo kill -9 <pid>
+
+Run the command again to verify no process is running now: sudo lsof -i :5432
+```
+
 ## Reference
 
 1. [DB table design](https://dbdiagram.io/d/644fb728dca9fb07c44eff8b)
