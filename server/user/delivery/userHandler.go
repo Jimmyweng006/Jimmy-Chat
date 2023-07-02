@@ -259,12 +259,13 @@ func listenToClient(h *UserHandler, c *client) {
 	// }
 
 	// load testing
+	testingNumber := 100000
 	start := time.Now()
-	messagesForKafka := make([][]byte, 200)
+	messagesForKafka := make([][]byte, testingNumber/5)
 	waitGroupWriter.Add(1)
 
 	go func() {
-		for i := 1; i <= 1000; i++ {
+		for i := 1; i <= testingNumber; i++ {
 			messageObj := Message{
 				Sender:  c.clientID,
 				Content: fmt.Sprintf("this is #%d message", i),
@@ -273,9 +274,9 @@ func listenToClient(h *UserHandler, c *client) {
 			if err != nil {
 				logrus.Fatal("construct user signIn body error:", err)
 			}
-			messagesForKafka[(i-1)%200] = messageForKafka
+			messagesForKafka[(i-1)%(testingNumber/5)] = messageForKafka
 
-			if i%200 == 0 {
+			if i%(testingNumber/5) == 0 {
 				// 將訊息寫入 Kafka
 				// logrus.Infof("Send message to Kafka: %s\n", messageForKafka)
 				log.Printf("Send message to Kafka with i = %d\n", i)
@@ -283,7 +284,7 @@ func listenToClient(h *UserHandler, c *client) {
 					logrus.Fatal("Error writing message: ", err)
 				}
 
-				messagesForKafka = make([][]byte, 200)
+				messagesForKafka = make([][]byte, (testingNumber / 5))
 			}
 		}
 
@@ -293,78 +294,18 @@ func listenToClient(h *UserHandler, c *client) {
 	waitGroupWriter.Wait()
 	end := time.Now()
 	elapsed := end.Sub(start)
-	logrus.Infof("how much time it takes to perform 1000 write: %s\n", elapsed)
+	logrus.Infof("how much time it takes to perform %d write: %s\n", testingNumber, elapsed)
 
 	logrus.Info("listenToClient() end...")
 	time.Sleep(10 * time.Minute)
 	logrus.Info("sleep() end...")
 }
 
-// func broadcast(h *UserHandler) {
-// 	logrus.Info("broadcast() start...")
-
-// 	defer h.MessageUsecase.CloseMessageQueueReader()
-
-// 	for {
-// 		message, err := h.MessageUsecase.ReadMessageFromMessageQueue(context.Background())
-// 		if err != nil {
-// 			logrus.Fatal("Error reading message: ", err)
-// 		}
-// 		logrus.Infof("Received message from Kafka: %s\n", message)
-
-// 		var messageObject Message
-// 		if err := json.Unmarshal(message, &messageObject); err != nil {
-// 			logrus.Error("Parse message from Kafka error", err)
-// 			return
-// 		}
-
-// 		logrus.Infof("messageObject: %v", messageObject)
-
-// 		senderID, err := strconv.Atoi(messageObject.Sender)
-// 		if err != nil {
-// 			logrus.Error(err)
-// 			return
-// 		}
-
-// 		err = h.MessageUsecase.Store(context.Background(), &db.Message{
-// 			RoomID:         1, // 1 mean public room
-// 			ReplyMessageID: sql.NullInt64{Valid: false},
-// 			SenderID:       int64(senderID),
-// 			MessageText:    string(messageObject.Content),
-// 		})
-// 		if err != nil {
-// 			logrus.Error(err)
-// 			return
-// 		}
-
-// 		user, err := h.UserUsecase.GetByUserID(context.Background(), int64(senderID))
-// 		if err != nil {
-// 			logrus.Error(err)
-// 			return
-// 		}
-
-// 		for c := range clientsMap {
-// 			logrus.Infof("start writing to client %s with message ---> %s\n", c.clientID, string(messageObject.Content))
-
-// 			messageSend := fmt.Sprintf("User %s: %s", user.Username, messageObject.Content)
-// 			err := c.conn.WriteMessage(websocket.TextMessage, []byte(messageSend))
-// 			if err != nil {
-// 				logrus.Error("error in broadcast: ", err)
-// 				c.conn.Close()
-// 				delete(clientsMap, c)
-// 				return
-// 			}
-// 		}
-
-// 		logrus.Info("broadcast() end...")
-// 	}
-// }
-
 func Broadcast(h *UserHandler, numConsumers int, readerConfig kafka.ReaderConfig) {
 	logrus.Info("broadcast() start...")
 
 	for i := 0; i < numConsumers; i++ {
-		logrus.Infof("this is %d reader", i)
+		logrus.Infof("this is reader: %d", i)
 		waitGroupReader.Add(1)
 
 		go func() {
