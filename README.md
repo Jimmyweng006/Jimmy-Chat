@@ -71,6 +71,32 @@
 * 2023/06/26
     1. enhance writer(writeMessage -> writeMessages)功能後，怎麼client一使用/chat就斷線... -> panic: runtime error: index out of range [201] with length 201，還敢忘記MOD啊....
     2. one writer & 3 reader(?), 處理1000筆資料的時間大約是5s左右... -> 之後嘗試更多筆資料(1w以上)看看！
+* 2023/07/02
+    1. getMessageByRoomID functionality
+    2. 開始研究Redis Cache -> 目前應該是採用Write-through的策略，也就是更新DB的時候也更新Cache
+    3. 先研究一下全部Cache的效益高不高好了...
+* 2023/07/04
+    1. Redis應該用來拿最新的100筆資料就好
+        1. 測一下200個request的總時長(postgres vs redis)
+    2. 應該要有獨立的API讓前端拿chat history，而不是後端從DB拿資料再透過web socket傳出去...
+* 2023/12/11
+    1. 完全忘記之前7月還沒commit的變更在幹嘛了... 算了準備來研究一下deployment跟CI/CD
+        1. [Docker Destkop](https://docs.docker.com/desktop/install/ubuntu/#install-docker-desktop): 三個步驟照著做沒煩惱
+        2. ssh key: source的那一方要產生ssh key，然後將public key放到destination server裡。
+        3. commands:
+            * systemctl --user start docker-desktop
+            * sudo systemctl status docker
+            * vim /etc/profile
+            * sudo systemctl restart docker
+* 2023/12/29
+    1. ok全部砍掉重弄，乖乖照Digital Ocean那邊的教學走好了...
+        1. [How To Install and Use Docker Compose on Ubuntu 22.04](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-22-04)
+            1. [Initial Server Setup with Ubuntu 22.04](https://www.digitalocean.com/community/tutorials/initial-server-setup-with-ubuntu-22-04)
+            2. [How To Install and Use Docker on Ubuntu 22.04](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04)
+        2. note: 之前沒辦法run docker ps -a/docker-compose up這些指令的問題，在弄完1-1然後用regular user的權限去執行就都好了...
+* 2023/12/30
+    1. 到logIn之前的步驟都能正常在server上執行了(docker-compose up/make migrateup)
+
 
 * 代辦
     1. 多個用戶加入頻道內聊天
