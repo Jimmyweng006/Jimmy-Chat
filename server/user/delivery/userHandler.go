@@ -229,76 +229,79 @@ func listenToClient(h *UserHandler, c *client) {
 
 	defer h.MessageUsecase.CloseMessageQueueWriter()
 
-	// for {
-	// 	_, message, err := c.conn.ReadMessage()
-	// 	if err != nil {
-	// 		logrus.Error("error in listening: ", err)
-	// 		delete(clientsMap, c)
-	// 		break
-	// 	}
-
-	// 	logrus.Infof("start reading from client %s with message ---> %s \n", c.clientID, string(message))
-
-	// 	messageObj := Message{
-	// 		Sender:  c.clientID,
-	// 		Content: string(message),
-	// 	}
-	// 	messageForKafka, err := json.Marshal(messageObj)
-	// 	if err != nil {
-	// 		logrus.Fatal("construct user signIn body error:", err)
-	// 	}
-
-	// 	// 將訊息寫入 Kafka
-	// 	logrus.Infof("Send message to Kafka: %s\n", messageForKafka)
-	// 	err = h.MessageUsecase.WriteMessageToMessageQueue(context.Background(), messageForKafka)
-	// 	if err != nil {
-	// 		logrus.Fatal("Error writing message: ", err)
-	// 	}
-
-	// 	logrus.Info("listenToClient() end...")
-	// }
-
-	// load testing
-	testingNumber := 100000
-	start := time.Now()
-	messagesForKafka := make([][]byte, testingNumber/5)
-	waitGroupWriter.Add(1)
-
-	go func() {
-		for i := 1; i <= testingNumber; i++ {
-			messageObj := Message{
-				Sender:  c.clientID,
-				Content: fmt.Sprintf("this is #%d message", i),
-			}
-			messageForKafka, err := json.Marshal(messageObj)
-			if err != nil {
-				logrus.Fatal("construct user signIn body error:", err)
-			}
-			messagesForKafka[(i-1)%(testingNumber/5)] = messageForKafka
-
-			if i%(testingNumber/5) == 0 {
-				// 將訊息寫入 Kafka
-				// logrus.Infof("Send message to Kafka: %s\n", messageForKafka)
-				log.Printf("Send message to Kafka with i = %d\n", i)
-				if err := h.MessageUsecase.WriteMessagesToMessageQueue(context.Background(), messagesForKafka); err != nil {
-					logrus.Fatal("Error writing message: ", err)
-				}
-
-				messagesForKafka = make([][]byte, (testingNumber / 5))
-			}
+	for {
+		_, message, err := c.conn.ReadMessage()
+		if err != nil {
+			logrus.Error("error in listening: ", err)
+			delete(clientsMap, c)
+			break
 		}
 
-		defer waitGroupWriter.Done()
-	}()
+		logrus.Infof("start reading from client %s with message ---> %s \n", c.clientID, string(message))
 
-	waitGroupWriter.Wait()
-	end := time.Now()
-	elapsed := end.Sub(start)
-	logrus.Infof("how much time it takes to perform %d write: %s\n", testingNumber, elapsed)
+		messageObj := Message{
+			Sender:  c.clientID,
+			Content: string(message),
+		}
+		messageForKafka, err := json.Marshal(messageObj)
+		if err != nil {
+			logrus.Fatal("construct user signIn body error:", err)
+		}
 
-	logrus.Info("listenToClient() end...")
-	time.Sleep(10 * time.Minute)
-	logrus.Info("sleep() end...")
+		// 將訊息寫入 Kafka
+		messagesForKafka := make([][]byte, 1)
+		messagesForKafka[0] = messageForKafka
+
+		logrus.Infof("Send message to Kafka: %s\n", messageForKafka)
+		err = h.MessageUsecase.WriteMessagesToMessageQueue(context.Background(), messagesForKafka)
+		if err != nil {
+			logrus.Fatal("Error writing message: ", err)
+		}
+
+		logrus.Info("listenToClient() end...")
+	}
+
+	// load testing
+	// testingNumber := 100000
+	// start := time.Now()
+	// messagesForKafka := make([][]byte, testingNumber/5)
+	// waitGroupWriter.Add(1)
+
+	// go func() {
+	// 	for i := 1; i <= testingNumber; i++ {
+	// 		messageObj := Message{
+	// 			Sender:  c.clientID,
+	// 			Content: fmt.Sprintf("this is #%d message", i),
+	// 		}
+	// 		messageForKafka, err := json.Marshal(messageObj)
+	// 		if err != nil {
+	// 			logrus.Fatal("construct user signIn body error:", err)
+	// 		}
+	// 		messagesForKafka[(i-1)%(testingNumber/5)] = messageForKafka
+
+	// 		if i%(testingNumber/5) == 0 {
+	// 			// 將訊息寫入 Kafka
+	// 			// logrus.Infof("Send message to Kafka: %s\n", messageForKafka)
+	// 			log.Printf("Send message to Kafka with i = %d\n", i)
+	// 			if err := h.MessageUsecase.WriteMessagesToMessageQueue(context.Background(), messagesForKafka); err != nil {
+	// 				logrus.Fatal("Error writing message: ", err)
+	// 			}
+
+	// 			messagesForKafka = make([][]byte, (testingNumber / 5))
+	// 		}
+	// 	}
+
+	// 	defer waitGroupWriter.Done()
+	// }()
+
+	// waitGroupWriter.Wait()
+	// end := time.Now()
+	// elapsed := end.Sub(start)
+	// logrus.Infof("how much time it takes to perform %d write: %s\n", testingNumber, elapsed)
+
+	// logrus.Info("listenToClient() end...")
+	// time.Sleep(10 * time.Minute)
+	// logrus.Info("sleep() end...")
 }
 
 func Broadcast(h *UserHandler, numConsumers int, readerConfig kafka.ReaderConfig) {
