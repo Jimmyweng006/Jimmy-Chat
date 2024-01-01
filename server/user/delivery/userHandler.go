@@ -26,6 +26,10 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		// 只允許來自指定源的請求
+		return r.Header.Get("Origin") == "http://localhost"
+	},
 }
 
 type client struct {
@@ -60,6 +64,11 @@ type UserHandler struct {
 	MessageUsecase domain.MessageUsecase
 }
 
+type LoginResponse struct {
+	Token string `json:"token,omitempty"`
+	Error string `json:"error,omitempty"`
+}
+
 func NewHandler(userUsercase domain.UserUsecase, messageUsecase domain.MessageUsecase) *UserHandler {
 	return &UserHandler{
 		UserUsecase:    userUsercase,
@@ -73,7 +82,7 @@ func (h *UserHandler) SignInHandler(w http.ResponseWriter, r *http.Request) {
 		var requestBody LoginRequest
 		err := json.NewDecoder(r.Body).Decode(&requestBody)
 		if err != nil {
-			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+			respondJSON(w, http.StatusBadRequest, LoginResponse{Error: "Failed to parse request body"})
 			return
 		}
 
@@ -89,7 +98,7 @@ func (h *UserHandler) SignInHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if user.Username != "" {
-			http.Error(w, "username had been used", http.StatusForbidden)
+			respondJSON(w, http.StatusForbidden, map[string]string{"error": "username had been used"})
 			return
 		}
 
@@ -99,19 +108,16 @@ func (h *UserHandler) SignInHandler(w http.ResponseWriter, r *http.Request) {
 			logrus.Fatal(err)
 		}
 
-		fmt.Println("Hashed Password:", string(hashedPassword))
-
 		err = h.UserUsecase.Store(context.Background(), &db.User{
 			Username: username,
 			Password: string(hashedPassword),
 		})
 		if err != nil {
-			http.Error(w, "create", http.StatusUnauthorized)
+			respondJSON(w, http.StatusUnauthorized, map[string]string{"error": "create account fail"})
+			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "create account successfully")
-		return
+		respondJSON(w, http.StatusOK, map[string]string{"message": "create account successfully"})
 	}
 }
 
@@ -121,7 +127,7 @@ func (h *UserHandler) LogInHandler(w http.ResponseWriter, r *http.Request) {
 		var requestBody LoginRequest
 		err := json.NewDecoder(r.Body).Decode(&requestBody)
 		if err != nil {
-			http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+			respondJSON(w, http.StatusBadRequest, LoginResponse{Error: "Failed to parse request body"})
 			return
 		}
 
@@ -133,63 +139,65 @@ func (h *UserHandler) LogInHandler(w http.ResponseWriter, r *http.Request) {
 		// check username & password satisfy data in DB
 		userData, err := h.UserUsecase.GetByUsername(context.Background(), username)
 		if err != nil {
-			http.Error(w, "check username error", http.StatusBadRequest)
-			return
-		} else if userData.Username != username {
-			http.Error(w, "username not match", http.StatusBadRequest)
+			respondJSON(w, http.StatusBadRequest, LoginResponse{Error: "check username error"})
 			return
 		}
 
-		err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(password))
-		if err == nil {
-			// 生成 JWT
-			token := jwt.New(jwt.SigningMethodHS256)
-			claims := token.Claims.(jwt.MapClaims)
-			claims["user_id"] = userData.ID
-			claims["exp"] = time.Now().Add(time.Hour * 24).Unix() // 設定過期時間為 1 天
-
-			// 簽署 JWT
-			signedToken, err := token.SignedString(secretKey)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			// 將 JWT 發送給客戶端
-			w.Write([]byte(signedToken))
-
-			logrus.Infof("user:%s login successfully", userData.Username)
-			return
-		} else {
-			http.Error(w, "password not match", http.StatusBadRequest)
+		if userData.Username != username {
+			respondJSON(w, http.StatusBadRequest, LoginResponse{Error: fmt.Sprintf("can not find username: %s", username)})
 			return
 		}
+
+		if err := bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(password)); err != nil {
+			respondJSON(w, http.StatusBadRequest, LoginResponse{Error: "password not match"})
+			return
+		}
+
+		// 生成 JWT
+		token := jwt.New(jwt.SigningMethodHS256)
+		claims := token.Claims.(jwt.MapClaims)
+		claims["user_id"] = userData.ID
+		claims["exp"] = time.Now().Add(time.Hour * 24).Unix() // 設定過期時間為 1 天
+
+		// 簽署 JWT
+		signedToken, err := token.SignedString(secretKey)
+		if err != nil {
+			respondJSON(w, http.StatusInternalServerError, LoginResponse{Error: err.Error()})
+			return
+		}
+
+		// 將 JWT 發送給客戶端
+		respondJSON(w, http.StatusOK, LoginResponse{Token: signedToken})
+		logrus.Infof("user:%s login successfully", userData.Username)
+		return
 
 	}
 }
 
 func (h *UserHandler) ChatHandler(w http.ResponseWriter, r *http.Request) {
 	tokenFromURL := extractTokenFromURL(r.URL)
+	// JWTtoken := r.Header["Authorization"][0]
 
 	// 驗證 JWT
 	token, err := jwt.Parse(tokenFromURL, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
 	if err != nil || !token.Valid {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		respondJSON(w, http.StatusUnauthorized, LoginResponse{Error: "Not able to start chat, please re login."})
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logrus.Error(err)
+		respondJSON(w, http.StatusUnauthorized, LoginResponse{Error: err.Error()})
 		return
 	}
 
 	// 提取使用者 ID
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		respondJSON(w, http.StatusUnauthorized, LoginResponse{Error: err.Error()})
 		return
 	}
 	clientID := claims["user_id"].(float64)
@@ -207,6 +215,18 @@ func (h *UserHandler) ChatHandler(w http.ResponseWriter, r *http.Request) {
 
 	// // one goroutine to handle broadcast
 	// go broadcast(h)
+}
+
+func respondJSON(w http.ResponseWriter, status int, responseMap interface{}) {
+	response, err := json.Marshal(responseMap)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	w.Write(response)
 }
 
 func extractTokenFromURL(url *url.URL) string {
@@ -227,7 +247,7 @@ func listenToClient(h *UserHandler, c *client) {
 		delete(clientsMap, c)
 	}()
 
-	defer h.MessageUsecase.CloseMessageQueueWriter()
+	// defer h.MessageUsecase.CloseMessageQueueWriter()
 
 	for {
 		_, message, err := c.conn.ReadMessage()
@@ -245,7 +265,8 @@ func listenToClient(h *UserHandler, c *client) {
 		}
 		messageForKafka, err := json.Marshal(messageObj)
 		if err != nil {
-			logrus.Fatal("construct user signIn body error:", err)
+			logrus.Error("construct user signIn body error:", err)
+			return
 		}
 
 		// 將訊息寫入 Kafka
@@ -255,7 +276,8 @@ func listenToClient(h *UserHandler, c *client) {
 		logrus.Infof("Send message to Kafka: %s\n", messageForKafka)
 		err = h.MessageUsecase.WriteMessagesToMessageQueue(context.Background(), messagesForKafka)
 		if err != nil {
-			logrus.Fatal("Error writing message: ", err)
+			logrus.Error("Error writing message: ", err)
+			return
 		}
 
 		logrus.Info("listenToClient() end...")

@@ -96,6 +96,14 @@
         2. note: 之前沒辦法run docker ps -a/docker-compose up這些指令的問題，在弄完1-1然後用regular user的權限去執行就都好了...
 * 2023/12/30
     1. 到logIn之前的步驟都能正常在server上執行了(docker-compose up/make migrateup)
+* 2023/12/31
+    1. 用Vue來達成client程式的SignIn functionality
+* 2024/01/01
+    1. 新年快樂！新年第一天繼續開心寫code！在模擬前端API發送到後端的時候，遇到之前常看見但都不是很懂的[CORS (Cross-Origin Resource Sharing)](https://medium.com/starbugs/%E5%BC%84%E6%87%82%E5%90%8C%E6%BA%90%E6%94%BF%E7%AD%96-same-origin-policy-%E8%88%87%E8%B7%A8%E7%B6%B2%E5%9F%9F-cors-e2e5c1a53a19)問題了 -> 只讓特定來源的request可以存取資源，如果不在後端設定的話，即使domain相同但port不同，仍然會被視為不同來源，而被Same Origin Policy擋住而無法存取。
+        * 用套件簡單地處理掉以上問題了... 也可以正確寫入註冊的帳號到後端了
+    2. 遇到使用者重新整理頁面，再去傳訊息會導致Kafka寫入異常的問題... 好險只是之前close Kafka writer的code亂放導致的...因為重新整理導致Web Socket重新建立，那如果writer也跟著被close，下一次再去寫就整組壞掉(logrus.Fatal)，實際上也不應該去close因為writer是全部人只有一組在共用的。但好險服務還是有被docker restart救回來就是了...
+    3. 完成三個流程(Sign In, Login, Chat)的基本功能，準備實驗前端deployment整合！
+    
 
 
 * 代辦
@@ -114,6 +122,8 @@
         1. 比較multiple reader/writer 跟 1 reader/writer的效能差異
     5. 拿到聊天室的聊天資訊
         1. 比較從Redis拿資料跟直接從Postgres拿資料的效能差異
+    6. 雖然還沒有寫Unit Test所以好像沒有什麼CI可言(?，不過至少推code到Github上後，CD(自動部署)應該要能做到吧！
+    7. traefik: 好像是新潮的reverse proxy? 之後有空來玩玩
 
 ## Learning
 

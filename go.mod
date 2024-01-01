@@ -12,6 +12,8 @@ require (
 )
 
 require (
+	github.com/felixge/httpsnoop v1.0.4 // indirect
+	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	golang.org/x/sys v0.8.0 // indirect
