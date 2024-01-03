@@ -20,7 +20,7 @@ jobs:
     - name: Deploy to Server
       run: |
         ssh -o StrictHostKeyChecking=no -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'ENDSSH'
-          cd /path/to/your/project
+          cd /home/Jimmy-Chat
           git pull origin main
           docker-compose down
           docker-compose up -d
