@@ -21,7 +21,7 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'ENDSSH'
           cd /home/Jimmy-Chat
-          git pull origin main
+          sudo git pull origin main
           docker-compose down
           docker-compose up -d
         ENDSSH
