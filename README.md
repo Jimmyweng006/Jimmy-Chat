@@ -106,6 +106,9 @@
 * 2024/01/03
     1. CI/CD for Backend/Frontend
     2. env url setting for Frontend
+* 2024/01/04
+    1. env url setting for Backend
+    2. local環境下Kafka都能正常收到訊息啊，怎麼上prod就有問題了...
     
 
 
@@ -125,10 +128,10 @@
         1. 比較multiple reader/writer 跟 1 reader/writer的效能差異
     5. 拿到聊天室的聊天資訊
         1. 比較從Redis拿資料跟直接從Postgres拿資料的效能差異
-    6. CI/CD: 雖然還沒有寫Unit Test所以好像沒有什麼CI可言(?，不過至少推code到Github上後，CD(自動部署)應該要能做到吧！
+    6. ~~CI/CD: 雖然還沒有寫Unit Test所以好像沒有什麼CI可言(?，不過至少推code到Github上後，CD(自動部署)應該要能做到吧！~~
     7. traefik: 好像是新潮的reverse proxy? 之後有空來玩玩
     8. web service: index page
-    9. config data for local/prod environment
+    9. ~~config data for local/prod environment~~
 
 ## Learning
 
