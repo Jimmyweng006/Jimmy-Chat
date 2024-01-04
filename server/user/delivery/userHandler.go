@@ -22,16 +22,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// chat service related config
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		// 只允許來自指定源的請求
-		return r.Header.Get("Origin") == "http://localhost"
-	},
-}
-
 type client struct {
 	conn     *websocket.Conn
 	clientID string
@@ -62,6 +52,7 @@ var waitGroupWriter sync.WaitGroup
 type UserHandler struct {
 	UserUsecase    domain.UserUsecase
 	MessageUsecase domain.MessageUsecase
+	Upgrader       websocket.Upgrader
 }
 
 type LoginResponse struct {
@@ -69,10 +60,11 @@ type LoginResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
-func NewHandler(userUsercase domain.UserUsecase, messageUsecase domain.MessageUsecase) *UserHandler {
+func NewHandler(userUsercase domain.UserUsecase, messageUsecase domain.MessageUsecase, upgrader websocket.Upgrader) *UserHandler {
 	return &UserHandler{
 		UserUsecase:    userUsercase,
 		MessageUsecase: messageUsecase,
+		Upgrader:       upgrader,
 	}
 }
 
@@ -187,7 +179,7 @@ func (h *UserHandler) ChatHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := h.Upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logrus.Error(err)
 		respondJSON(w, http.StatusUnauthorized, LoginResponse{Error: err.Error()})

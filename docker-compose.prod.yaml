@@ -5,7 +5,7 @@ services:
     image: golang:1.19.6-alpine3.16
     # 本機檔案掛載至 docker 內部
     environment:
-      - GO_ENV=development
+      - GO_ENV=production
     volumes:
       - .:/server
     # docker 啟動時所在的目錄

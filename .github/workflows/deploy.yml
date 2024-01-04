@@ -23,5 +23,5 @@ jobs:
           cd /home/jimmy/Jimmy-Chat
           git pull origin main
           docker-compose down
-          docker-compose up -d
+          docker-compose -f docker-compose.prod.yaml up -d
         ENDSSH

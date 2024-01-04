@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 	userRepository "github.com/Jimmyweng006/Jimmy-Chat/server/user/repository"
 	UserUsecase "github.com/Jimmyweng006/Jimmy-Chat/server/user/usecase"
 	"github.com/segmentio/kafka-go"
+	"github.com/spf13/viper"
 
 	messageRepository "github.com/Jimmyweng006/Jimmy-Chat/server/message/repository"
 	messageUsecase "github.com/Jimmyweng006/Jimmy-Chat/server/message/usecase"
@@ -57,10 +57,9 @@ func main() {
 	// Log setting
 	wd, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 
-	logrus.Info("pwd: ", wd)
 	logPath := filepath.Join(wd, "server.log")
 
 	file, err := os.OpenFile("server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
@@ -70,6 +69,22 @@ func main() {
 	} else {
 		logrus.Info("Failed to log to file, using default stderr")
 	}
+
+	// get config
+	env := os.Getenv("GO_ENV")
+	if env == "" {
+		env = "development"
+	}
+
+	viper.SetConfigName("config." + env) // 例如 config.development 或 config.production
+	viper.AddConfigPath(".")             // 可以添加多個搜索路徑
+	viper.SetConfigType("yaml")
+
+	if err := viper.ReadInConfig(); err != nil {
+		logrus.Fatalf("Error reading config file, %s", err)
+	}
+
+	allowedOrigin := viper.GetString("allowedOrigin")
 
 	// DB setting
 	dbConnection, err := sql.Open(
@@ -107,6 +122,15 @@ func main() {
 		Topic:   KAFKA_TOPIC,
 		Dialer:  dialer,
 	}
+	// chat service related config
+	var upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			// 只允許來自指定源的請求
+			return r.Header.Get("Origin") == allowedOrigin
+		},
+	}
 
 	// Clean Architecture injection
 	queryObject := db.New(dbConnection)
@@ -119,7 +143,7 @@ func main() {
 	messageRepository := messageRepository.NewMessageRepository(queryObject)
 	messageUsecase := messageUsecase.NewMessageUsecase(messageRepository, messageQueueWrapper)
 
-	userHandler := delivery.NewHandler(userUsercase, messageUsecase)
+	userHandler := delivery.NewHandler(userUsercase, messageUsecase, upgrader)
 	defer userHandler.MessageUsecase.CloseMessageQueueWriter()
 
 	// handler setting
@@ -134,7 +158,7 @@ func main() {
 	logrus.Info("server start on port: 8080")
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	originsOk := handlers.AllowedOrigins([]string{"http://localhost"}) // 或者使用 handlers.AllowedOrigins([]string{"*"}) 來允許所有源
+	originsOk := handlers.AllowedOrigins([]string{allowedOrigin})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(http.DefaultServeMux))
