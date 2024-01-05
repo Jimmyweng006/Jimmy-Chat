@@ -22,6 +22,5 @@ jobs:
         ssh -o StrictHostKeyChecking=no -p ${{ secrets.PORT }} ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'ENDSSH'
           cd /home/jimmy/Jimmy-Chat
           git pull origin main
-          sudo systemctl stop docker
           docker-compose -f docker-compose.prod.yaml up -d
         ENDSSH
