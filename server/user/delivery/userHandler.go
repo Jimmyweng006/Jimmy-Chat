@@ -352,7 +352,7 @@ func Broadcast(h *UserHandler, numConsumers int, readerConfig kafka.ReaderConfig
 
 func processMessage(h *UserHandler, message []byte) {
 	var messageObject Message
-	// logrus.Infof("message from processMessage(): %s", string(message))
+	logrus.Infof("message from processMessage(): %s", string(message))
 	if err := json.Unmarshal(message, &messageObject); err != nil {
 		logrus.Error("Parse message from Kafka error: ", err)
 		return
