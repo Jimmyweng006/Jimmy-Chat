@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -325,29 +324,31 @@ func Broadcast(h *UserHandler, numConsumers int, readerConfig kafka.ReaderConfig
 		logrus.Infof("this is reader: %d", i)
 		waitGroupReader.Add(1)
 
-		go func() {
-			// readerConfig.Partition = i
-			reader := kafka.NewReader(readerConfig)
+		configCopy := readerConfig
+		reader := kafka.NewReader(configCopy)
 
-			defer reader.Close()
-			defer waitGroupReader.Done()
-
-			for {
-				m, err := reader.ReadMessage(context.Background())
-				if err != nil {
-					break
-				}
-				log.Printf("message at topic/partition/offset %v/%v/%v: %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
-
-				processMessage(h, m.Value)
-			}
-		}()
+		go readMessages(reader, h)
 	}
 
 	// actually will hold on there...
 	waitGroupReader.Wait()
 
 	logrus.Info("broadcast() end...")
+}
+
+func readMessages(reader *kafka.Reader, h *UserHandler) {
+	defer reader.Close()
+	defer waitGroupReader.Done()
+
+	for {
+		m, err := reader.ReadMessage(context.Background())
+		if err != nil {
+			break
+		}
+		// logrus.Printf("message at topic/partition/offset %v/%v/%v: %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
+
+		processMessage(h, m.Value)
+	}
 }
 
 func processMessage(h *UserHandler, message []byte) {
