@@ -85,7 +85,7 @@ func main() {
 		logrus.Fatalf("Error reading config file, %s", err)
 	}
 
-	allowedOrigin := viper.GetString("allowedOrigin")
+	allowedOrigins := viper.GetString("allowedOrigins")
 
 	// DB setting
 	dbConnection, err := sql.Open(
@@ -128,8 +128,15 @@ func main() {
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-			// 只允許來自指定源的請求
-			return r.Header.Get("Origin") == allowedOrigin
+			origin := r.Header.Get("Origin")
+
+			for _, allowedOrigin := range strings.Split(allowedOrigins, ",") {
+				if origin == allowedOrigin {
+					return true
+				}
+			}
+
+			return false
 		},
 	}
 
@@ -159,7 +166,7 @@ func main() {
 	logrus.Info("server start on port: 8080")
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	originsOk := handlers.AllowedOrigins(strings.Split(allowedOrigin, ","))
+	originsOk := handlers.AllowedOrigins(strings.Split(allowedOrigins, ","))
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(http.DefaultServeMux))
