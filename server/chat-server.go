@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
@@ -158,7 +159,7 @@ func main() {
 	logrus.Info("server start on port: 8080")
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	originsOk := handlers.AllowedOrigins([]string{allowedOrigin, "http://jimmy-kiet.tech"})
+	originsOk := handlers.AllowedOrigins(strings.Split(allowedOrigin, ","))
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(http.DefaultServeMux))
