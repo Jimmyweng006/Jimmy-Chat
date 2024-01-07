@@ -158,7 +158,7 @@ func main() {
 	logrus.Info("server start on port: 8080")
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	originsOk := handlers.AllowedOrigins([]string{allowedOrigin})
+	originsOk := handlers.AllowedOrigins([]string{allowedOrigin, "http://jimmy-kiet.tech"})
 	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(http.DefaultServeMux))
