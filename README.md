@@ -108,8 +108,10 @@
     2. env url setting for Frontend
 * 2024/01/04
     1. env url setting for Backend
-    2. local環境下Kafka都能正常收到訊息啊，怎麼上prod就有問題了...
-    
+    2. local環境下Kafka都能正常收到訊息啊，怎麼上prod就有問題了... -> 好吧container重啟即可...
+* 2024/01/07
+    1. setup domain name
+    2. 完整的多人對話功能。load chat room message -> TBC
 
 
 * 代辦

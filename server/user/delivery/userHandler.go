@@ -125,8 +125,6 @@ func (h *UserHandler) LogInHandler(w http.ResponseWriter, r *http.Request) {
 		username := requestBody.Username
 		password := requestBody.Password
 
-		logrus.Infof("username: %s, password: %s", username, password)
-
 		// check username & password satisfy data in DB
 		userData, err := h.UserUsecase.GetByUsername(context.Background(), username)
 		if err != nil {
@@ -359,8 +357,6 @@ func processMessage(h *UserHandler, message []byte) {
 		return
 	}
 
-	// logrus.Infof("messageObject: %v", messageObject)
-
 	senderID, err := strconv.Atoi(messageObject.Sender)
 	if err != nil {
 		logrus.Error(err)
@@ -385,15 +381,23 @@ func processMessage(h *UserHandler, message []byte) {
 	}
 
 	for c := range clientsMap {
-		// logrus.Infof("start writing to client %s with message ---> %s\n", c.clientID, string(messageObject.Content))
+		if c.clientID != strconv.Itoa(senderID) {
+			MessagePushToFronted, err := json.Marshal(Message{
+				Sender:  user.Username,
+				Content: messageObject.Content,
+			})
+			if err != nil {
+				logrus.Error("parse structure error when pushing message to frontend")
+				return
+			}
 
-		messageSend := fmt.Sprintf("User %s: %s", user.Username, messageObject.Content)
-		err := c.conn.WriteMessage(websocket.TextMessage, []byte(messageSend))
-		if err != nil {
-			logrus.Error("error in broadcast: ", err)
-			c.conn.Close()
-			delete(clientsMap, c)
-			return
+			err = c.conn.WriteMessage(websocket.TextMessage, MessagePushToFronted)
+			if err != nil {
+				logrus.Error("error in broadcast: ", err)
+				c.conn.Close()
+				delete(clientsMap, c)
+				return
+			}
 		}
 	}
 }
