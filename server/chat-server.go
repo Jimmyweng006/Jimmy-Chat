@@ -161,7 +161,7 @@ func main() {
 	http.HandleFunc("/chat", userHandler.ChatHandler)
 
 	// one goroutine to handle broadcast
-	go delivery.Broadcast(userHandler, 3, readerConfig)
+	go delivery.Broadcast(userHandler)
 
 	logrus.Info("server start on port: 8080")
 

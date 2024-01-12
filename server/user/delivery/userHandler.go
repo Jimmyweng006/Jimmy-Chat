@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/segmentio/kafka-go"
 
 	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
 	"github.com/Jimmyweng006/Jimmy-Chat/server/domain"
@@ -271,85 +270,23 @@ func listenToClient(h *UserHandler, c *client) {
 
 		logrus.Info("listenToClient() end...")
 	}
-
-	// load testing
-	// testingNumber := 100000
-	// start := time.Now()
-	// messagesForKafka := make([][]byte, testingNumber/5)
-	// waitGroupWriter.Add(1)
-
-	// go func() {
-	// 	for i := 1; i <= testingNumber; i++ {
-	// 		messageObj := Message{
-	// 			Sender:  c.clientID,
-	// 			Content: fmt.Sprintf("this is #%d message", i),
-	// 		}
-	// 		messageForKafka, err := json.Marshal(messageObj)
-	// 		if err != nil {
-	// 			logrus.Fatal("construct user signIn body error:", err)
-	// 		}
-	// 		messagesForKafka[(i-1)%(testingNumber/5)] = messageForKafka
-
-	// 		if i%(testingNumber/5) == 0 {
-	// 			// 將訊息寫入 Kafka
-	// 			// logrus.Infof("Send message to Kafka: %s\n", messageForKafka)
-	// 			log.Printf("Send message to Kafka with i = %d\n", i)
-	// 			if err := h.MessageUsecase.WriteMessagesToMessageQueue(context.Background(), messagesForKafka); err != nil {
-	// 				logrus.Fatal("Error writing message: ", err)
-	// 			}
-
-	// 			messagesForKafka = make([][]byte, (testingNumber / 5))
-	// 		}
-	// 	}
-
-	// 	defer waitGroupWriter.Done()
-	// }()
-
-	// waitGroupWriter.Wait()
-	// end := time.Now()
-	// elapsed := end.Sub(start)
-	// logrus.Infof("how much time it takes to perform %d write: %s\n", testingNumber, elapsed)
-
-	// logrus.Info("listenToClient() end...")
-	// time.Sleep(10 * time.Minute)
-	// logrus.Info("sleep() end...")
 }
 
-func Broadcast(h *UserHandler, numConsumers int, readerConfig kafka.ReaderConfig) {
+func Broadcast(h *UserHandler) {
 	logrus.Info("broadcast() start...")
 
-	for i := 0; i < numConsumers; i++ {
-		logrus.Infof("this is reader: %d", i)
-		waitGroupReader.Add(1)
-
-		configCopy := readerConfig
-		reader := kafka.NewReader(configCopy)
-
-		go readMessages(reader, h)
-	}
-
-	// actually will hold on there...
-	waitGroupReader.Wait()
-
-	logrus.Info("broadcast() end...")
-}
-
-func readMessages(reader *kafka.Reader, h *UserHandler) {
-	defer reader.Close()
-	defer waitGroupReader.Done()
-
 	for {
-		m, err := reader.ReadMessage(context.Background())
+		m, err := h.MessageUsecase.ReadMessageFromMessageQueue(context.Background())
 		if err != nil {
 			break
 		}
 		// logrus.Printf("message at topic/partition/offset %v/%v/%v: %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
 
-		processMessage(h, m.Value)
+		storeAndSendMessageToOtherUsersExceptSender(h, m)
 	}
 }
 
-func processMessage(h *UserHandler, message []byte) {
+func storeAndSendMessageToOtherUsersExceptSender(h *UserHandler, message []byte) {
 	var messageObject Message
 	logrus.Infof("message from processMessage(): %s", string(message))
 	if err := json.Unmarshal(message, &messageObject); err != nil {
@@ -387,7 +324,7 @@ func processMessage(h *UserHandler, message []byte) {
 				Content: messageObject.Content,
 			})
 			if err != nil {
-				logrus.Error("parse structure error when pushing message to frontend")
+				logrus.Error("parse structure error when sending web socket message to frontend")
 				return
 			}
 

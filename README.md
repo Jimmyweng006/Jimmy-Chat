@@ -112,7 +112,9 @@
 * 2024/01/07
     1. [setup domain name for digital ocean server](https://docs.digitalocean.com/products/networking/dns/getting-started/dns-registrars/)
     2. 完整的多人對話功能。load chat room message -> TBC
-
+* 2024/01/12
+    1. 加了Partition = 3的設置後，control center上的consumer數量從1變成2了，不過現在才快速發50個消息，就漏了15個...
+    2. 好吧先改回只有一個reader的比較簡單的模式，之後看有沒有需要再增加reader，不過在此之前應該要先處裡100筆消息，第一筆2024-01-12 22:58:57.743，最後一筆2024-01-12 23:00:38.208 +0800，花了一分多鐘寫了100筆資料... 該改成bulk create DB records了
 
 * 代辦
     1. 多個用戶加入頻道內聊天
@@ -129,11 +131,12 @@
     4. 用Kafka減緩Chat Server傳送大量訊息的壓力
         1. 比較multiple reader/writer 跟 1 reader/writer的效能差異
     5. 拿到聊天室的聊天資訊
-        1. 比較從Redis拿資料跟直接從Postgres拿資料的效能差異
     6. ~~CI/CD: 雖然還沒有寫Unit Test所以好像沒有什麼CI可言(?，不過至少推code到Github上後，CD(自動部署)應該要能做到吧！~~
     7. traefik: 好像是新潮的reverse proxy? 之後有空來玩玩
     8. web service: index page
     9. ~~config data for local/prod environment~~
+    10. signIn完跳轉login頁面
+    11. 在chat頁面左邊，有隱藏式的聊天列表
 
 ## Learning
 
