@@ -115,6 +115,8 @@
 * 2024/01/12
     1. 加了Partition = 3的設置後，control center上的consumer數量從1變成2了，不過現在才快速發50個消息，就漏了15個...
     2. 好吧先改回只有一個reader的比較簡單的模式，之後看有沒有需要再增加reader，不過在此之前應該要先處裡100筆消息，第一筆2024-01-12 22:58:57.743，最後一筆2024-01-12 23:00:38.208 +0800，花了一分多鐘寫了100筆資料... 該改成bulk create DB records了
+* 2024/01/14
+    1. 讀了一些CA的文章後對於概念有更清楚一些了，不過目前架構應該就維持如[CA](https://github.com/bxcodec/go-clean-arch/tree/master)
 
 * 代辦
     1. 多個用戶加入頻道內聊天
@@ -145,6 +147,18 @@
 1. How to start Backend Service: docker-compose up
 2. How to start Frontend Service: docker-compose up --build
 
+### Clean Architecture
+
+#### [reference](https://orenrose.medium.com/clean-architecture-in-golang-with-go-kit-e5b716a3b881)
+
+```
+1. A change in an outer layer must not cause any change in the inner layers.
+2. The Interactor is where the BL is implemented.
+
+Layers: Transport -> Endpoint -> Service
+Others Layers: Data -> Entity
+```
+
 ### Kafka
 
 1. Terminology(Top-Down Hierarchy)
@@ -154,10 +168,6 @@
     4. Partition: Topic的所有資料再切分成一或多個區段，一個資料只會去到一個區段！
     5. Offset: 下一次Consume的起始點
     6. Replication: 同一筆資料存在幾台Broker上
-
-## Debug
-
-1. 開始新的project, 不管怎樣先執行go mod init github.com/your-username/your-project-name 就對惹
 
 ### Docker
 
@@ -176,6 +186,10 @@ Kill all the processes that are running under this port: sudo kill -9 <pid>
 
 Run the command again to verify no process is running now: sudo lsof -i :5432
 ```
+
+## Debug
+
+1. 開始新的project, 不管怎樣先執行go mod init github.com/your-username/your-project-name 就對惹
 
 ## Reference
 
