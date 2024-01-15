@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"time"
 
 	"github.com/Jimmyweng006/Jimmy-Chat/server/domain"
 	queue "github.com/Jimmyweng006/Jimmy-Chat/server/messageQueue"
@@ -22,6 +23,7 @@ func NewMessageUsecase(repository domain.MessageRepository, messageEventQueue qu
 	}
 }
 
+// message repository
 func (m *messageUsecase) Store(ctx context.Context, message *db.Message) error {
 	err := m.messageRepository.Store(ctx, message)
 	if err != nil {
@@ -31,6 +33,37 @@ func (m *messageUsecase) Store(ctx context.Context, message *db.Message) error {
 	return nil
 }
 
+func (m *messageUsecase) RetriveHistoryMessage(ctx context.Context, roomID int64, u domain.UserUsecase) (*[]domain.MessageDTO, error) {
+	// read room history messages and send to current user directly
+	start := time.Now()
+	historyMessages, err := m.messageRepository.GetByRoomID(context.Background(), roomID)
+	if err != nil {
+		logrus.Error(err)
+		return nil, err
+	}
+	end := time.Now()
+	elapsed := end.Sub(start)
+	logrus.Infof("it takes %s to retrive %d history data from DB\n", elapsed, len(*historyMessages))
+
+	// convert to DTO(transport layer to encode response to frontend)
+	var data []domain.MessageDTO
+	for _, message := range *historyMessages {
+		user, err := u.GetByUserID(context.Background(), int64(message.SenderID))
+		if err != nil {
+			logrus.Error(err)
+			return nil, err
+		}
+
+		data = append(data, domain.MessageDTO{
+			Sender:  user.Username,
+			Content: message.MessageText,
+		})
+	}
+
+	return &data, nil
+}
+
+// messageQueue
 func (m *messageUsecase) ReadMessageFromMessageQueue(ctx context.Context) ([]byte, error) {
 	message, err := m.messageEventQueue.ReadMessage(ctx)
 	if err != nil {

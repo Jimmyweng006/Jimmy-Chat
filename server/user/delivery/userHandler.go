@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -22,18 +21,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type client struct {
-	conn     *websocket.Conn
-	clientID string
+const (
+	PUBLIC_ROOM_ID = 1
+)
+
+type Client struct {
+	Conn     *websocket.Conn
+	ClientID string
 }
 
-type Message struct {
-	Sender  string
-	Content string
-}
-
-var clientsMap = make(map[*client]bool)
-var broadcastChannel = make(chan Message)
+var clientsMap = make(map[*Client]bool)
 
 // JWT config
 var secretKey = []byte("your-secret-key")
@@ -42,12 +39,6 @@ type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
-
-// Kafka config
-var kafkaTopic = "public-room"
-
-var waitGroupReader sync.WaitGroup
-var waitGroupWriter sync.WaitGroup
 
 type UserHandler struct {
 	UserUsecase    domain.UserUsecase
@@ -73,6 +64,7 @@ func SetRouter(h *UserHandler, allowedOrigins string) {
 	http.HandleFunc("/logIn", h.LogInHandler)
 	// http.HandleFunc("/logout", logOutHandler)
 	http.HandleFunc("/chat", h.ChatHandler)
+	http.HandleFunc("/chat/messages", h.ChatHistoryHandler)
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	originsOk := handlers.AllowedOrigins(strings.Split(allowedOrigins, ","))
@@ -207,15 +199,31 @@ func (h *UserHandler) ChatHandler(w http.ResponseWriter, r *http.Request) {
 	clientID := claims["user_id"].(float64)
 
 	logrus.Infof("New client: %f connected\n", clientID)
-	c := &client{
-		conn:     conn,
-		clientID: strconv.Itoa(int(clientID)),
+	c := &Client{
+		Conn:     conn,
+		ClientID: strconv.Itoa(int(clientID)),
 	}
 
 	clientsMap[c] = true
 
 	// a separate goroutine to listen on client
 	go listenToClient(h, c)
+}
+
+func (h *UserHandler) ChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		data, err := h.MessageUsecase.RetriveHistoryMessage(context.Background(), PUBLIC_ROOM_ID, h.UserUsecase)
+		if err != nil {
+			logrus.Error(err)
+			respondJSON(w, http.StatusBadRequest, map[string]string{"message": "retrieve history data error"})
+			return
+		}
+
+		respondJSON(w, http.StatusOK, map[string]interface{}{"data": *data})
+		return
+	}
+
+	respondJSON(w, http.StatusBadRequest, map[string]string{"message": "http method not supported"})
 }
 
 func respondJSON(w http.ResponseWriter, status int, responseMap interface{}) {
@@ -240,28 +248,28 @@ func extractTokenFromURL(url *url.URL) string {
 	return token
 }
 
-func listenToClient(h *UserHandler, c *client) {
+func listenToClient(h *UserHandler, c *Client) {
 	logrus.Info("listenToClient() start...")
 	defer func() {
-		logrus.Infof("Client disconnected: %s\n", c.clientID)
-		c.conn.Close()
+		logrus.Infof("Client disconnected: %s\n", c.ClientID)
+		c.Conn.Close()
 		delete(clientsMap, c)
 	}()
 
 	// defer h.MessageUsecase.CloseMessageQueueWriter()
 
 	for {
-		_, message, err := c.conn.ReadMessage()
+		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			logrus.Error("error in listening: ", err)
 			delete(clientsMap, c)
 			break
 		}
 
-		logrus.Infof("start reading from client %s with message ---> %s \n", c.clientID, string(message))
+		logrus.Infof("start reading from client %s with message ---> %s \n", c.ClientID, string(message))
 
-		messageObj := Message{
-			Sender:  c.clientID,
+		messageObj := domain.MessageDTO{
+			Sender:  c.ClientID,
 			Content: string(message),
 		}
 		messageForKafka, err := json.Marshal(messageObj)
@@ -300,7 +308,7 @@ func Broadcast(h *UserHandler) {
 }
 
 func storeAndSendMessageToOtherUsersExceptSender(h *UserHandler, message []byte) {
-	var messageObject Message
+	var messageObject domain.MessageDTO
 	logrus.Infof("message from processMessage(): %s", string(message))
 	if err := json.Unmarshal(message, &messageObject); err != nil {
 		logrus.Error("Parse message from Kafka error: ", err)
@@ -314,7 +322,7 @@ func storeAndSendMessageToOtherUsersExceptSender(h *UserHandler, message []byte)
 	}
 
 	err = h.MessageUsecase.Store(context.Background(), &db.Message{
-		RoomID:         1, // 1 mean public room
+		RoomID:         PUBLIC_ROOM_ID,
 		ReplyMessageID: sql.NullInt64{Valid: false},
 		SenderID:       int64(senderID),
 		MessageText:    string(messageObject.Content),
@@ -331,8 +339,8 @@ func storeAndSendMessageToOtherUsersExceptSender(h *UserHandler, message []byte)
 	}
 
 	for c := range clientsMap {
-		if c.clientID != strconv.Itoa(senderID) {
-			MessagePushToFronted, err := json.Marshal(Message{
+		if c.ClientID != strconv.Itoa(senderID) {
+			MessagePushToFronted, err := json.Marshal(domain.MessageDTO{
 				Sender:  user.Username,
 				Content: messageObject.Content,
 			})
@@ -341,10 +349,10 @@ func storeAndSendMessageToOtherUsersExceptSender(h *UserHandler, message []byte)
 				return
 			}
 
-			err = c.conn.WriteMessage(websocket.TextMessage, MessagePushToFronted)
+			err = c.Conn.WriteMessage(websocket.TextMessage, MessagePushToFronted)
 			if err != nil {
 				logrus.Error("error in broadcast: ", err)
-				c.conn.Close()
+				c.Conn.Close()
 				delete(clientsMap, c)
 				return
 			}

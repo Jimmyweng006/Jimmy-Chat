@@ -47,3 +47,39 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 	)
 	return i, err
 }
+
+const findMessagesByRoomID = `-- name: FindMessagesByRoomID :many
+SELECT id, room_id, reply_message_id, sender_id, message_text, modified_at, created_at FROM messages
+WHERE room_id = $1
+`
+
+func (q *Queries) FindMessagesByRoomID(ctx context.Context, roomID int64) ([]Message, error) {
+	rows, err := q.db.QueryContext(ctx, findMessagesByRoomID, roomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.RoomID,
+			&i.ReplyMessageID,
+			&i.SenderID,
+			&i.MessageText,
+			&i.ModifiedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

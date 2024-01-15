@@ -117,6 +117,10 @@
     2. 好吧先改回只有一個reader的比較簡單的模式，之後看有沒有需要再增加reader，不過在此之前應該要先處裡100筆消息，第一筆2024-01-12 22:58:57.743，最後一筆2024-01-12 23:00:38.208 +0800，花了一分多鐘寫了100筆資料... 該改成bulk create DB records了
 * 2024/01/14
     1. 讀了一些CA的文章後對於概念有更清楚一些了，不過目前架構應該就維持如[CA](https://github.com/bxcodec/go-clean-arch/tree/master)
+* 2024/01/15
+    1. 實際做一做才發現問題，給聊天歷史紀錄的API不應該再透過ws去傳給前端資料了，而是直接JSON格式的資料回給前端，再由前端去呈現資料就好...
+    2. 聊天室歷史紀錄完成end to end完成！
+
 
 * 代辦
     1. 多個用戶加入頻道內聊天
@@ -132,12 +136,12 @@
         4. ~~logIn before chating!!!~~ done
     4. 用Kafka減緩Chat Server傳送大量訊息的壓力
         1. 比較multiple reader/writer 跟 1 reader/writer的效能差異
-    5. 拿到聊天室的聊天資訊
+    5. ~~拿到聊天室的聊天資訊~~
     6. ~~CI/CD: 雖然還沒有寫Unit Test所以好像沒有什麼CI可言(?，不過至少推code到Github上後，CD(自動部署)應該要能做到吧！~~
     7. traefik: 好像是新潮的reverse proxy? 之後有空來玩玩
     8. web service: index page
     9. ~~config data for local/prod environment~~
-    10. signIn完跳轉login頁面
+    10. ~~signIn完跳轉login頁面~~
     11. 在chat頁面左邊，有隱藏式的聊天列表
 
 ## Learning

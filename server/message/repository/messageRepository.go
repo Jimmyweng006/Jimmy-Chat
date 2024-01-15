@@ -32,3 +32,12 @@ func (m *messageRepository) Store(ctx context.Context, message *db.Message) erro
 
 	return nil
 }
+
+func (m *messageRepository) GetByRoomID(ctx context.Context, id int64) (*[]db.Message, error) {
+	message, err := m.query.FindMessagesByRoomID(ctx, id)
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	return &message, nil
+}

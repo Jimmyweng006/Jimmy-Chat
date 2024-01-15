@@ -7,3 +7,7 @@ INSERT INTO messages (
 ) VALUES (
   $1, $2, $3, $4
 ) RETURNING *;
+
+-- name: FindMessagesByRoomID :many
+SELECT * FROM messages
+WHERE room_id = $1;
