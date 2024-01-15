@@ -139,10 +139,12 @@
     5. ~~拿到聊天室的聊天資訊~~
     6. ~~CI/CD: 雖然還沒有寫Unit Test所以好像沒有什麼CI可言(?，不過至少推code到Github上後，CD(自動部署)應該要能做到吧！~~
     7. traefik: 好像是新潮的reverse proxy? 之後有空來玩玩
-    8. web service: index page
+    8. ~~web service: index page~~
     9. ~~config data for local/prod environment~~
     10. ~~signIn完跳轉login頁面~~
     11. 在chat頁面左邊，有隱藏式的聊天列表
+    12. 準備導入fiber作為框架，進一步refactor現有架構
+    13. chat page需要驗證後才能存取
 
 ## Learning
 
