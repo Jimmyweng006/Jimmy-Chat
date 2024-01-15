@@ -20,7 +20,6 @@ import (
 	messageRepository "github.com/Jimmyweng006/Jimmy-Chat/server/message/repository"
 	messageUsecase "github.com/Jimmyweng006/Jimmy-Chat/server/message/usecase"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/websocket"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
@@ -154,21 +153,8 @@ func main() {
 	userHandler := delivery.NewHandler(userUsercase, messageUsecase, upgrader)
 	defer userHandler.MessageUsecase.CloseMessageQueueWriter()
 
-	// handler setting
-	http.HandleFunc("/signIn", userHandler.SignInHandler)
-	http.HandleFunc("/logIn", userHandler.LogInHandler)
-	// http.HandleFunc("/logout", logOutHandler)
-	http.HandleFunc("/chat", userHandler.ChatHandler)
-
 	// one goroutine to handle broadcast
 	go delivery.Broadcast(userHandler)
 
-	logrus.Info("server start on port: 8080")
-
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
-	originsOk := handlers.AllowedOrigins(strings.Split(allowedOrigins, ","))
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
-
-	http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(http.DefaultServeMux))
-	logrus.Fatal(http.ListenAndServe(":8080", nil))
+	delivery.SetRouter(userHandler, allowedOrigins)
 }

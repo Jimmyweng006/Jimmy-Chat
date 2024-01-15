@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 
 	db "github.com/Jimmyweng006/Jimmy-Chat/db/sqlc"
 	"github.com/Jimmyweng006/Jimmy-Chat/server/domain"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -64,6 +66,20 @@ func NewHandler(userUsercase domain.UserUsecase, messageUsecase domain.MessageUs
 		MessageUsecase: messageUsecase,
 		Upgrader:       upgrader,
 	}
+}
+
+func SetRouter(h *UserHandler, allowedOrigins string) {
+	http.HandleFunc("/signIn", h.SignInHandler)
+	http.HandleFunc("/logIn", h.LogInHandler)
+	// http.HandleFunc("/logout", logOutHandler)
+	http.HandleFunc("/chat", h.ChatHandler)
+
+	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	originsOk := handlers.AllowedOrigins(strings.Split(allowedOrigins, ","))
+	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
+
+	logrus.Info("server start on port: 8080")
+	logrus.Fatal(http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(http.DefaultServeMux)))
 }
 
 func (h *UserHandler) SignInHandler(w http.ResponseWriter, r *http.Request) {
@@ -200,9 +216,6 @@ func (h *UserHandler) ChatHandler(w http.ResponseWriter, r *http.Request) {
 
 	// a separate goroutine to listen on client
 	go listenToClient(h, c)
-
-	// // one goroutine to handle broadcast
-	// go broadcast(h)
 }
 
 func respondJSON(w http.ResponseWriter, status int, responseMap interface{}) {
