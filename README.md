@@ -145,6 +145,7 @@
     11. 在chat頁面左邊，有隱藏式的聊天列表
     12. 準備導入fiber作為框架，進一步refactor現有架構
     13. chat page需要驗證後才能存取
+    14. 使用MAC的中文輸入有bug，一按enter確認字型，訊息就先被送出了
 
 ## Learning
 
