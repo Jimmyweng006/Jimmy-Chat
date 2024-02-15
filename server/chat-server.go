@@ -25,23 +25,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
-type client struct {
-	conn     *websocket.Conn
-	clientID string
-}
-
 type Message struct {
 	Sender  string
 	Content []byte
 }
-
-var clientsMap = make(map[*client]bool)
-var broadcastChannel = make(chan Message)
 
 const (
 	// HOST value should equal to service name in yaml.services
