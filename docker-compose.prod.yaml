@@ -54,8 +54,6 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29091,PLAINTEXT_HOST://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_HEAP_OPTS: "-Xmx512M -Xms512M" # 調整JVM記憶體設定
-    mem_limit: 512m
   
   control-center:
     image: confluentinc/cp-enterprise-control-center
@@ -78,5 +76,3 @@ services:
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
-      CONTROL_CENTER_HEAP_OPTS: "-Xmx512M -Xms512M" # 調整JVM記憶體設定
-    mem_limit: 512m
